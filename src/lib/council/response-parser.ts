@@ -1,5 +1,6 @@
 import "server-only";
 
+import { InvalidModelOutputError } from "@/lib/council/errors";
 import type { AdvisorResponseContent, CouncilDecision } from "@/types/council";
 
 const SUMMARY_MAX_LENGTH = 4_000;
@@ -18,12 +19,7 @@ const VALID_RECOMMENDATIONS: CouncilDecision[] = [
   "insufficient_information",
 ];
 
-export class ModelOutputParseError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ModelOutputParseError";
-  }
-}
+export class ModelOutputParseError extends InvalidModelOutputError {}
 
 function assertPlainObject(value: unknown, label: string): Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {

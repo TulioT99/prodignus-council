@@ -147,7 +147,7 @@ export function validateDecision(value: unknown): Decision {
   return decision;
 }
 
-export function validateContrarianRequestBody(value: unknown): { decision: Decision } {
+export function validateCouncilRequestBody(value: unknown): { decision: Decision } {
   if (!isPlainObject(value)) {
     throw new DecisionValidationError("Request body must be a JSON object.");
   }

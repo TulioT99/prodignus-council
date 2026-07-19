@@ -85,7 +85,12 @@ export type AdvisorResult = {
   errorMessage?: string;
 };
 
-export type ContrarianErrorCode =
+export type AdvisorExecutionConfig = {
+  advisorId: string;
+  modelEnvVar: string;
+};
+
+export type CouncilErrorCode =
   | "INVALID_REQUEST"
   | "CONFIGURATION_ERROR"
   | "PROVIDER_TIMEOUT"
@@ -94,25 +99,25 @@ export type ContrarianErrorCode =
   | "INVALID_MODEL_OUTPUT"
   | "INTERNAL_ERROR";
 
-export type ContrarianRequest = {
+export type CouncilApiRequest = {
   decision: Decision;
 };
 
-export type ContrarianApiSuccess = {
+export type CouncilApiSuccess = {
   ok: true;
-  advisor: AdvisorResult;
+  result: CouncilResult;
 };
 
-export type ContrarianApiFailure = {
+export type CouncilApiFailure = {
   ok: false;
   error: {
-    code: ContrarianErrorCode;
+    code: CouncilErrorCode;
     message: string;
     retryable: boolean;
   };
 };
 
-export type ContrarianApiResponse = ContrarianApiSuccess | ContrarianApiFailure;
+export type CouncilApiResponse = CouncilApiSuccess | CouncilApiFailure;
 
 export type ChairmanResult = {
   decision: CouncilDecision;

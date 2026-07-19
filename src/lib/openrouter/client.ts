@@ -7,22 +7,29 @@ import {
 } from "@/lib/openrouter/types";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const REQUEST_TIMEOUT_MS = 90_000;
-const TEMPERATURE = 0.3;
+const DEFAULT_TIMEOUT_MS = 90_000;
+const DEFAULT_TEMPERATURE = 0.3;
 
-function getConfiguration(): { apiKey: string; model: string } {
+export type CallOpenRouterOptions = {
+  model: string;
+  systemPrompt: string;
+  userPrompt: string;
+  temperature?: number;
+  timeoutMs?: number;
+};
+
+function getApiKey(): string {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
-  const model = process.env.OPENROUTER_MODEL_CONTRARIAN?.trim();
 
-  if (!apiKey || !model) {
+  if (!apiKey) {
     throw new OpenRouterClientError(
       "CONFIGURATION_ERROR",
-      "OpenRouter is not configured. Set OPENROUTER_API_KEY and OPENROUTER_MODEL_CONTRARIAN in .env.local.",
+      "OpenRouter API key is not configured.",
       false,
     );
   }
 
-  return { apiKey, model };
+  return apiKey;
 }
 
 function sanitizeProviderMessage(message: string | undefined): string {
@@ -79,14 +86,29 @@ function extractUsage(response: OpenRouterChatCompletionResponse) {
   };
 }
 
-export async function createChatCompletion(
-  systemPrompt: string,
-  userPrompt: string,
+export async function callOpenRouter(
+  options: CallOpenRouterOptions,
 ): Promise<OpenRouterCompletionResult> {
-  const { apiKey, model } = getConfiguration();
+  const {
+    model,
+    systemPrompt,
+    userPrompt,
+    temperature = DEFAULT_TEMPERATURE,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+  } = options;
+
+  if (!model.trim()) {
+    throw new OpenRouterClientError(
+      "CONFIGURATION_ERROR",
+      "A model ID is required for OpenRouter requests.",
+      false,
+    );
+  }
+
+  const apiKey = getApiKey();
   const startedAt = Date.now();
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(OPENROUTER_API_URL, {
@@ -101,7 +123,7 @@ export async function createChatCompletion(
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: TEMPERATURE,
+        temperature,
         stream: false,
       }),
       signal: controller.signal,

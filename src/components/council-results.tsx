@@ -107,7 +107,7 @@ export function CouncilResults({ result }: CouncilResultsProps) {
           <div className="sm:col-span-2">
             <dt className="text-neutral-500">Chairman</dt>
             <dd className="mt-1 font-medium text-neutral-900">
-              Prototype mock recommendation
+              Prototype Chairman (static mock, not live analysis)
             </dd>
           </div>
         </dl>

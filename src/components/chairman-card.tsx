@@ -46,7 +46,7 @@ export function ChairmanCard({ chairman }: ChairmanCardProps) {
             Chairman
           </p>
           <span className="rounded border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-neutral-600">
-            Prototype Mock
+            Prototype Chairman
           </span>
         </div>
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">

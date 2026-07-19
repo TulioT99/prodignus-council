@@ -1,12 +1,25 @@
 import { getAdvisorPersonaById } from "@/data/advisor-personas";
 import type {
+  AdvisorAnalysisItem,
   AdvisorResult,
   ChairmanResult,
   CouncilResult,
   Decision,
 } from "@/types/council";
 
-const MOCK_CHAIRMAN: ChairmanResult = {
+type MockAdvisorContent = {
+  status: AdvisorResult["status"];
+  summary: string;
+  analysis: AdvisorAnalysisItem[];
+  assumptions: string[];
+  risks: string[];
+  recommendation: AdvisorResult["recommendation"];
+  confidence: number;
+  durationMs: number;
+  totalTokens: number;
+};
+
+const MOCK_CHAIRMAN_TEMPLATE: ChairmanResult = {
   decision: "test_first",
   executiveSummary:
     "The council agrees that unbounded AI conversation introduces disproportionate risk for Prodignus's core audience, but also recognizes that selective AI assistance could improve completion rates within guided journeys. A controlled pilot is the prudent path before any platform-wide conversational shift.",
@@ -45,8 +58,8 @@ const MOCK_CHAIRMAN: ChairmanResult = {
   confidence: 0.78,
 };
 
-const MOCK_ADVISOR_ANALYSES: Omit<AdvisorResult, "persona" | "source">[] = [
-  {
+const MOCK_ADVISOR_TEMPLATES: Record<string, MockAdvisorContent> = {
+  "ADV-002": {
     status: "success",
     summary:
       "The decision should be rebuilt from the citizen outcome: reliable access to entitled support, not the interaction modality.",
@@ -77,7 +90,7 @@ const MOCK_ADVISOR_ANALYSES: Omit<AdvisorResult, "persona" | "source">[] = [
     durationMs: 1040,
     totalTokens: 2105,
   },
-  {
+  "ADV-003": {
     status: "success",
     summary:
       "Strategic upside exists in contextual AI, but only if deployed as an accelerator within journeys rather than a parallel product surface.",
@@ -108,7 +121,7 @@ const MOCK_ADVISOR_ANALYSES: Omit<AdvisorResult, "persona" | "source">[] = [
     durationMs: 880,
     totalTokens: 1762,
   },
-  {
+  "ADV-004": {
     status: "success",
     summary:
       "Consumer platforms rarely expose unconstrained AI to vulnerable users; they use guided flows with intelligent assistance behind the scenes.",
@@ -139,7 +152,7 @@ const MOCK_ADVISOR_ANALYSES: Omit<AdvisorResult, "persona" | "source">[] = [
     durationMs: 960,
     totalTokens: 1920,
   },
-  {
+  "ADV-005": {
     status: "success",
     summary:
       "Open AI conversation requires a separate safety, logging, and content pipeline that the current team cannot responsibly operate at launch scale.",
@@ -170,59 +183,70 @@ const MOCK_ADVISOR_ANALYSES: Omit<AdvisorResult, "persona" | "source">[] = [
     durationMs: 1020,
     totalTokens: 2040,
   },
-];
+};
 
-const MOCK_ADVISOR_PERSONA_IDS = ["ADV-002", "ADV-003", "ADV-004", "ADV-005"] as const;
+function cloneStringArray(values: string[]): string[] {
+  return [...values];
+}
 
-export function createMockAdvisorResults(): AdvisorResult[] {
-  return MOCK_ADVISOR_ANALYSES.map((analysis, index) => ({
-    persona: getAdvisorPersonaById(MOCK_ADVISOR_PERSONA_IDS[index]),
-    source: "mock" as const,
-    ...analysis,
+function cloneAnalysis(items: AdvisorAnalysisItem[]): AdvisorAnalysisItem[] {
+  return items.map((item) => ({
+    title: item.title,
+    description: item.description,
   }));
 }
 
-function sortAdvisors(advisors: AdvisorResult[]): AdvisorResult[] {
-  return [...advisors].sort((left, right) => left.persona.id.localeCompare(right.persona.id));
-}
-
-export function createFailedContrarianResult(errorMessage: string): AdvisorResult {
+function cloneChairmanResult(chairman: ChairmanResult): ChairmanResult {
   return {
-    persona: getAdvisorPersonaById("ADV-001"),
-    source: "live",
-    status: "failed",
-    summary: "",
-    analysis: [],
-    assumptions: [],
-    risks: [],
-    recommendation: "insufficient_information",
-    confidence: 0,
-    durationMs: 0,
-    totalTokens: 0,
-    errorMessage,
+    ...chairman,
+    areasOfAgreement: cloneStringArray(chairman.areasOfAgreement),
+    areasOfDisagreement: cloneStringArray(chairman.areasOfDisagreement),
+    criticalAssumptions: cloneStringArray(chairman.criticalAssumptions),
+    principalRisks: cloneStringArray(chairman.principalRisks),
+    upside: cloneStringArray(chairman.upside),
+    recommendedActions: cloneStringArray(chairman.recommendedActions),
   };
 }
 
-export function createCouncilResult(
-  decision: Decision,
-  contrarian: AdvisorResult,
-): CouncilResult {
-  const mockAdvisors = createMockAdvisorResults();
-  const advisors = sortAdvisors([contrarian, ...mockAdvisors]);
-  const successfulAdvisors = advisors.filter((advisor) => advisor.status === "success");
-  const totalDurationMs = advisors.reduce((total, advisor) => total + advisor.durationMs, 0);
+export function getMockChairmanResult(): ChairmanResult {
+  return cloneChairmanResult(MOCK_CHAIRMAN_TEMPLATE);
+}
 
-  let status: CouncilResult["status"] = "complete";
+export function getMockAdvisorResult(advisorId: string): AdvisorResult {
+  const template = MOCK_ADVISOR_TEMPLATES[advisorId];
 
-  if (contrarian.status === "failed") {
-    status = successfulAdvisors.length >= 3 ? "partial" : "failed";
+  if (!template) {
+    throw new Error(`No mock advisor template found for ${advisorId}.`);
   }
+
+  const persona = getAdvisorPersonaById(advisorId);
+
+  return {
+    persona: { ...persona },
+    source: "mock",
+    status: template.status,
+    summary: template.summary,
+    analysis: cloneAnalysis(template.analysis),
+    assumptions: cloneStringArray(template.assumptions),
+    risks: cloneStringArray(template.risks),
+    recommendation: template.recommendation,
+    confidence: template.confidence,
+    durationMs: template.durationMs,
+    totalTokens: template.totalTokens,
+  };
+}
+
+export function createPrototypeCouncilResult(decision: Decision): CouncilResult {
+  const advisors = ["ADV-002", "ADV-003", "ADV-004", "ADV-005"].map((advisorId) =>
+    getMockAdvisorResult(advisorId),
+  );
+  const totalDurationMs = advisors.reduce((total, advisor) => total + advisor.durationMs, 0);
 
   return {
     decision,
-    status,
+    status: "partial",
     advisors,
-    chairman: MOCK_CHAIRMAN,
+    chairman: getMockChairmanResult(),
     totalDurationMs,
   };
 }

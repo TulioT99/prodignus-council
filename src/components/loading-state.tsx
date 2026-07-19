@@ -2,11 +2,11 @@ import { advisorPersonas } from "@/data/advisor-personas";
 import { councilConfig } from "@/config/council";
 
 const LOADING_MESSAGES: Record<string, string> = {
-  "ADV-001": "Consulting OpenRouter for risk analysis...",
-  "ADV-002": "Challenging assumptions (prototype mock)...",
-  "ADV-003": "Looking for opportunities (prototype mock)...",
-  "ADV-004": "Bringing a fresh perspective (prototype mock)...",
-  "ADV-005": "Preparing an execution plan (prototype mock)...",
+  "ADV-001": "Calling configured live model...",
+  "ADV-002": "Prototype mock pending...",
+  "ADV-003": "Prototype mock pending...",
+  "ADV-004": "Prototype mock pending...",
+  "ADV-005": "Prototype mock pending...",
 };
 
 export function LoadingState() {
@@ -52,8 +52,9 @@ export function LoadingState() {
       </ul>
 
       <p className="mt-8 text-sm text-neutral-500">
-        The Contrarian uses OpenRouter. Other advisors and the Chairman remain
-        static prototype responses.
+        ADV-001 calls the configured live model. Remaining advisors and the
+        Chairman use static prototype responses. The prototype Chairman does not
+        analyze live advisor output.
       </p>
     </section>
   );

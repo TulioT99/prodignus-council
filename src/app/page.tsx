@@ -5,13 +5,8 @@ import { CouncilForm } from "@/components/council-form";
 import { CouncilResults } from "@/components/council-results";
 import { LoadingState } from "@/components/loading-state";
 import { councilConfig } from "@/config/council";
-import {
-  createCouncilResult,
-  createFailedContrarianResult,
-} from "@/data/mock-council-result";
 import type {
-  AdvisorResult,
-  ContrarianApiResponse,
+  CouncilApiResponse,
   CouncilRequest,
   CouncilResult,
   Decision,
@@ -32,14 +27,8 @@ function createDecisionFromRequest(request: CouncilRequest, sequence: number): D
   };
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
-
-async function fetchContrarianAdvisor(decision: Decision): Promise<AdvisorResult> {
-  const response = await fetch("/api/council/contrarian", {
+async function fetchCouncilResult(decision: Decision): Promise<CouncilResult> {
+  const response = await fetch("/api/council", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -47,21 +36,19 @@ async function fetchContrarianAdvisor(decision: Decision): Promise<AdvisorResult
     body: JSON.stringify({ decision }),
   });
 
-  let payload: ContrarianApiResponse;
+  let payload: CouncilApiResponse;
 
   try {
-    payload = (await response.json()) as ContrarianApiResponse;
+    payload = (await response.json()) as CouncilApiResponse;
   } catch {
-    return createFailedContrarianResult(
-      "The Contrarian service returned an unreadable response.",
-    );
+    throw new Error("The Council service returned an unreadable response.");
   }
 
   if (!payload.ok) {
-    return createFailedContrarianResult(payload.error.message);
+    throw new Error(payload.error.message);
   }
 
-  return payload.advisor;
+  return payload.result;
 }
 
 export default function Home() {
@@ -79,15 +66,12 @@ export default function Home() {
     setSubmitError(null);
 
     try {
-      const [contrarian] = await Promise.all([
-        fetchContrarianAdvisor(decision),
-        delay(councilConfig.mockAdvisorDelayMs),
-      ]);
-
-      setResult(createCouncilResult(decision, contrarian));
-    } catch {
+      setResult(await fetchCouncilResult(decision));
+    } catch (error) {
       setSubmitError(
-        "The council session could not be completed. Please try again.",
+        error instanceof Error
+          ? error.message
+          : "The council session could not be completed. Please try again.",
       );
     } finally {
       setIsLoading(false);
@@ -112,7 +96,7 @@ export default function Home() {
               </p>
             </div>
             <span className="rounded-md border border-neutral-300 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-neutral-700">
-              Sprint 2 — Live Contrarian
+              Sprint 3 — Hybrid Council
             </span>
           </div>
         </header>
