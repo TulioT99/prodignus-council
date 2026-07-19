@@ -54,18 +54,65 @@ export type CouncilRequest = {
   constraints: string;
 };
 
+export type AdvisorAnalysisItem = {
+  title: string;
+  description: string;
+};
+
+export type AdvisorResponseContent = {
+  summary: string;
+  analysis: AdvisorAnalysisItem[];
+  assumptions: string[];
+  risks: string[];
+  recommendation: CouncilDecision;
+  confidence: number;
+};
+
+export type AdvisorSource = "live" | "mock";
+
 export type AdvisorResult = {
   persona: AdvisorPersona;
+  source: AdvisorSource;
   status: AdvisorStatus;
   summary: string;
-  analysis: string;
+  analysis: AdvisorAnalysisItem[];
   assumptions: string[];
   risks: string[];
   recommendation: CouncilDecision;
   confidence: number;
   durationMs: number;
   totalTokens: number;
+  errorMessage?: string;
 };
+
+export type ContrarianErrorCode =
+  | "INVALID_REQUEST"
+  | "CONFIGURATION_ERROR"
+  | "PROVIDER_TIMEOUT"
+  | "PROVIDER_ERROR"
+  | "INVALID_PROVIDER_RESPONSE"
+  | "INVALID_MODEL_OUTPUT"
+  | "INTERNAL_ERROR";
+
+export type ContrarianRequest = {
+  decision: Decision;
+};
+
+export type ContrarianApiSuccess = {
+  ok: true;
+  advisor: AdvisorResult;
+};
+
+export type ContrarianApiFailure = {
+  ok: false;
+  error: {
+    code: ContrarianErrorCode;
+    message: string;
+    retryable: boolean;
+  };
+};
+
+export type ContrarianApiResponse = ContrarianApiSuccess | ContrarianApiFailure;
 
 export type ChairmanResult = {
   decision: CouncilDecision;

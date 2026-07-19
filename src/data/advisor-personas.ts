@@ -17,7 +17,7 @@ export const advisorPersonas: AdvisorPersona[] = [
       "Optimistic estimates must be tested.",
       "Operational reality matters more than presentation quality.",
     ],
-    model: "Prototype Mock Model",
+    model: "OpenRouter (configured model)",
   },
   {
     id: "ADV-002",
@@ -92,3 +92,15 @@ export const advisorPersonas: AdvisorPersona[] = [
     model: "Prototype Mock Model",
   },
 ];
+
+const personaById = new Map(advisorPersonas.map((persona) => [persona.id, persona]));
+
+export function getAdvisorPersonaById(id: string): AdvisorPersona {
+  const persona = personaById.get(id);
+
+  if (!persona) {
+    throw new Error(`Advisor persona not found: ${id}`);
+  }
+
+  return persona;
+}

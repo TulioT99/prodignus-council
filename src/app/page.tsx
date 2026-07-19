@@ -5,8 +5,17 @@ import { CouncilForm } from "@/components/council-form";
 import { CouncilResults } from "@/components/council-results";
 import { LoadingState } from "@/components/loading-state";
 import { councilConfig } from "@/config/council";
-import { createMockCouncilResult } from "@/data/mock-council-result";
-import type { CouncilRequest, CouncilResult, Decision } from "@/types/council";
+import {
+  createCouncilResult,
+  createFailedContrarianResult,
+} from "@/data/mock-council-result";
+import type {
+  AdvisorResult,
+  ContrarianApiResponse,
+  CouncilRequest,
+  CouncilResult,
+  Decision,
+} from "@/types/council";
 
 function createDecisionFromRequest(request: CouncilRequest, sequence: number): Decision {
   const createdAt = new Date();
@@ -23,22 +32,66 @@ function createDecisionFromRequest(request: CouncilRequest, sequence: number): D
   };
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+async function fetchContrarianAdvisor(decision: Decision): Promise<AdvisorResult> {
+  const response = await fetch("/api/council/contrarian", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ decision }),
+  });
+
+  let payload: ContrarianApiResponse;
+
+  try {
+    payload = (await response.json()) as ContrarianApiResponse;
+  } catch {
+    return createFailedContrarianResult(
+      "The Contrarian service returned an unreadable response.",
+    );
+  }
+
+  if (!payload.ok) {
+    return createFailedContrarianResult(payload.error.message);
+  }
+
+  return payload.advisor;
+}
+
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<CouncilResult | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const decisionSequenceRef = useRef(0);
 
-  function handleConveneCouncil(values: CouncilRequest) {
+  async function handleConveneCouncil(values: CouncilRequest) {
     decisionSequenceRef.current += 1;
     const decision = createDecisionFromRequest(values, decisionSequenceRef.current);
 
     setIsLoading(true);
     setResult(null);
+    setSubmitError(null);
 
-    window.setTimeout(() => {
-      setResult(createMockCouncilResult(decision));
+    try {
+      const [contrarian] = await Promise.all([
+        fetchContrarianAdvisor(decision),
+        delay(councilConfig.mockAdvisorDelayMs),
+      ]);
+
+      setResult(createCouncilResult(decision, contrarian));
+    } catch {
+      setSubmitError(
+        "The council session could not be completed. Please try again.",
+      );
+    } finally {
       setIsLoading(false);
-    }, councilConfig.loadingDelayMs);
+    }
   }
 
   return (
@@ -59,13 +112,22 @@ export default function Home() {
               </p>
             </div>
             <span className="rounded-md border border-neutral-300 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-neutral-700">
-              MVP 1 — Interface Prototype
+              Sprint 2 — Live Contrarian
             </span>
           </div>
         </header>
 
         <div className="space-y-8">
           <CouncilForm isSubmitting={isLoading} onSubmit={handleConveneCouncil} />
+
+          {submitError ? (
+            <div
+              role="alert"
+              className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+            >
+              {submitError}
+            </div>
+          ) : null}
 
           {isLoading ? <LoadingState /> : null}
 

@@ -36,6 +36,8 @@ interface CouncilResultsProps {
 
 export function CouncilResults({ result }: CouncilResultsProps) {
   const { decision } = result;
+  const liveAdvisorCount = result.advisors.filter((advisor) => advisor.source === "live").length;
+  const mockAdvisorCount = result.advisors.filter((advisor) => advisor.source === "mock").length;
 
   return (
     <section aria-label="Council results" className="space-y-8">
@@ -96,7 +98,16 @@ export function CouncilResults({ result }: CouncilResultsProps) {
           <div>
             <dt className="text-neutral-500">Advisors</dt>
             <dd className="mt-1 font-medium text-neutral-900">
-              {result.advisors.length}
+              {result.advisors.length}{" "}
+              <span className="font-normal text-neutral-600">
+                ({liveAdvisorCount} live, {mockAdvisorCount} mock)
+              </span>
+            </dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-neutral-500">Chairman</dt>
+            <dd className="mt-1 font-medium text-neutral-900">
+              Prototype mock recommendation
             </dd>
           </div>
         </dl>

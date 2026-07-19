@@ -1,22 +1,10 @@
-import { advisorPersonas } from "@/data/advisor-personas";
+import { getAdvisorPersonaById } from "@/data/advisor-personas";
 import type {
   AdvisorResult,
   ChairmanResult,
   CouncilResult,
   Decision,
 } from "@/types/council";
-
-const personaById = new Map(advisorPersonas.map((persona) => [persona.id, persona]));
-
-function getPersona(id: string) {
-  const persona = personaById.get(id);
-
-  if (!persona) {
-    throw new Error(`Advisor persona not found: ${id}`);
-  }
-
-  return persona;
-}
 
 const MOCK_CHAIRMAN: ChairmanResult = {
   decision: "test_first",
@@ -57,34 +45,23 @@ const MOCK_CHAIRMAN: ChairmanResult = {
   confidence: 0.78,
 };
 
-const MOCK_ADVISOR_ANALYSES: Omit<AdvisorResult, "persona">[] = [
-  {
-    status: "success",
-    summary:
-      "Open AI conversation creates unacceptable exposure for citizens who may follow incorrect guidance on benefits and rights.",
-    analysis:
-      "In CRAS operations, the highest-risk failures occur when citizens act on incomplete information about eligibility, deadlines, or required documentation. A free-form AI assistant amplifies this risk because users with low digital literacy often cannot distinguish authoritative guidance from plausible but incorrect responses. Guided journeys constrain the decision space and preserve accountability. Introducing open conversation without proven safeguards would shift liability toward Prodignus at a moment when trust is still being established.",
-    assumptions: [
-      "Citizens will treat AI responses as official guidance.",
-      "Error rates in open conversation will exceed those in structured flows.",
-      "Support teams cannot absorb increased correction workload.",
-    ],
-    risks: [
-      "Citizens may miss deadlines after receiving incomplete AI guidance.",
-      "Misinterpretation of eligibility criteria could reduce access to entitled benefits.",
-      "Public incidents involving AI errors would damage institutional credibility.",
-    ],
-    recommendation: "do_not_proceed",
-    confidence: 0.86,
-    durationMs: 920,
-    totalTokens: 1840,
-  },
+const MOCK_ADVISOR_ANALYSES: Omit<AdvisorResult, "persona" | "source">[] = [
   {
     status: "success",
     summary:
       "The decision should be rebuilt from the citizen outcome: reliable access to entitled support, not the interaction modality.",
-    analysis:
-      "The framing assumes a binary between guided journeys and open AI conversation, but the underlying need is trustworthy navigation of complex public programs. First principles suggest decomposing the problem into information retrieval, decision support, and action completion. Open conversation optimizes flexibility but weakens verifiability. Guided journeys optimize verifiability but may under-serve edge cases. A hybrid bounded-assistance model inside journeys preserves auditability while addressing variation in citizen needs. Full open conversation fails the verifiability test without mature governance.",
+    analysis: [
+      {
+        title: "Fundamental citizen need",
+        description:
+          "The framing assumes a binary between guided journeys and open AI conversation, but the underlying need is trustworthy navigation of complex public programs.",
+      },
+      {
+        title: "Verifiability test",
+        description:
+          "Open conversation optimizes flexibility but weakens verifiability. Guided journeys optimize verifiability but may under-serve edge cases. A hybrid bounded-assistance model inside journeys preserves auditability while addressing variation in citizen needs.",
+      },
+    ],
     assumptions: [
       "Journey completion correlates with successful program access.",
       "Bounded assistance can cover the majority of citizen variation.",
@@ -104,8 +81,18 @@ const MOCK_ADVISOR_ANALYSES: Omit<AdvisorResult, "persona">[] = [
     status: "success",
     summary:
       "Strategic upside exists in contextual AI, but only if deployed as an accelerator within journeys rather than a parallel product surface.",
-    analysis:
-      "From a product strategy lens, open AI conversation is a high-ceiling, high-risk bet for a team with constrained capacity. Guided journeys are the defensible core experience for the current market. The expansion opportunity lies in embedding AI where it reduces friction: clarifying form fields, explaining next steps, and adapting language to literacy level. This preserves the journey as the product backbone while capturing long-term value from conversational intelligence. A pilot can validate whether AI increases completion without re-architecting the entire citizen experience.",
+    analysis: [
+      {
+        title: "Strategic risk profile",
+        description:
+          "From a product strategy lens, open AI conversation is a high-ceiling, high-risk bet for a team with constrained capacity. Guided journeys are the defensible core experience for the current market.",
+      },
+      {
+        title: "Expansion path",
+        description:
+          "The expansion opportunity lies in embedding AI where it reduces friction: clarifying form fields, explaining next steps, and adapting language to literacy level. This preserves the journey as the product backbone while capturing long-term value from conversational intelligence.",
+      },
+    ],
     assumptions: [
       "Completion rate is the primary near-term success metric.",
       "Embedded AI features can ship incrementally without platform rework.",
@@ -125,8 +112,18 @@ const MOCK_ADVISOR_ANALYSES: Omit<AdvisorResult, "persona">[] = [
     status: "success",
     summary:
       "Consumer platforms rarely expose unconstrained AI to vulnerable users; they use guided flows with intelligent assistance behind the scenes.",
-    analysis:
-      "Outside GovTech, successful digital products for non-expert users favor structured paths with optional help layers. Open chat is typically reserved for power users or support escalation, not primary task completion. Prodignus should adopt this pattern: guided journeys as the default product, with AI acting as a copilot that never leaves the journey context. Attempting to compete on conversational openness would misallocate a small team's resources and set expectations that the organization cannot safely meet in a high-responsibility domain.",
+    analysis: [
+      {
+        title: "Cross-industry pattern",
+        description:
+          "Outside GovTech, successful digital products for non-expert users favor structured paths with optional help layers. Open chat is typically reserved for power users or support escalation, not primary task completion.",
+      },
+      {
+        title: "Resource allocation",
+        description:
+          "Prodignus should adopt this pattern: guided journeys as the default product, with AI acting as a copilot that never leaves the journey context. Attempting to compete on conversational openness would misallocate a small team's resources.",
+      },
+    ],
     assumptions: [
       "Citizens compare Prodignus implicitly to banking and health portals, not ChatGPT.",
       "Perceived safety matters more than perceived innovation.",
@@ -146,8 +143,18 @@ const MOCK_ADVISOR_ANALYSES: Omit<AdvisorResult, "persona">[] = [
     status: "success",
     summary:
       "Open AI conversation requires a separate safety, logging, and content pipeline that the current team cannot responsibly operate at launch scale.",
-    analysis:
-      "Architecturally, guided journeys provide deterministic state transitions, testable content, and clear audit trails. Open conversational interfaces require prompt management, retrieval grounding, moderation, rate limiting, session persistence, and incident replay—all before citizen-facing deployment. With a small team and limited budget, the execution path is to extend the existing journey engine with a bounded AI module sharing the same governance layer. A test-first approach allows the team to validate infrastructure, monitoring, and escalation workflows before committing to a conversational front door.",
+    analysis: [
+      {
+        title: "Architectural contrast",
+        description:
+          "Guided journeys provide deterministic state transitions, testable content, and clear audit trails. Open conversational interfaces require prompt management, retrieval grounding, moderation, rate limiting, session persistence, and incident replay.",
+      },
+      {
+        title: "Execution path",
+        description:
+          "With a small team and limited budget, the execution path is to extend the existing journey engine with a bounded AI module sharing the same governance layer. A test-first approach allows the team to validate infrastructure before committing to a conversational front door.",
+      },
+    ],
     assumptions: [
       "Existing journey infrastructure can host an AI module without full rewrite.",
       "Pilot traffic will be sufficient to stress-test operational tooling.",
@@ -165,25 +172,57 @@ const MOCK_ADVISOR_ANALYSES: Omit<AdvisorResult, "persona">[] = [
   },
 ];
 
-const ADVISOR_PERSONA_IDS = [
-  "ADV-001",
-  "ADV-002",
-  "ADV-003",
-  "ADV-004",
-  "ADV-005",
-] as const;
+const MOCK_ADVISOR_PERSONA_IDS = ["ADV-002", "ADV-003", "ADV-004", "ADV-005"] as const;
 
-export function createMockCouncilResult(decision: Decision): CouncilResult {
-  const advisors: AdvisorResult[] = MOCK_ADVISOR_ANALYSES.map((analysis, index) => ({
-    persona: getPersona(ADVISOR_PERSONA_IDS[index]),
+export function createMockAdvisorResults(): AdvisorResult[] {
+  return MOCK_ADVISOR_ANALYSES.map((analysis, index) => ({
+    persona: getAdvisorPersonaById(MOCK_ADVISOR_PERSONA_IDS[index]),
+    source: "mock" as const,
     ...analysis,
   }));
+}
+
+function sortAdvisors(advisors: AdvisorResult[]): AdvisorResult[] {
+  return [...advisors].sort((left, right) => left.persona.id.localeCompare(right.persona.id));
+}
+
+export function createFailedContrarianResult(errorMessage: string): AdvisorResult {
+  return {
+    persona: getAdvisorPersonaById("ADV-001"),
+    source: "live",
+    status: "failed",
+    summary: "",
+    analysis: [],
+    assumptions: [],
+    risks: [],
+    recommendation: "insufficient_information",
+    confidence: 0,
+    durationMs: 0,
+    totalTokens: 0,
+    errorMessage,
+  };
+}
+
+export function createCouncilResult(
+  decision: Decision,
+  contrarian: AdvisorResult,
+): CouncilResult {
+  const mockAdvisors = createMockAdvisorResults();
+  const advisors = sortAdvisors([contrarian, ...mockAdvisors]);
+  const successfulAdvisors = advisors.filter((advisor) => advisor.status === "success");
+  const totalDurationMs = advisors.reduce((total, advisor) => total + advisor.durationMs, 0);
+
+  let status: CouncilResult["status"] = "complete";
+
+  if (contrarian.status === "failed") {
+    status = successfulAdvisors.length >= 3 ? "partial" : "failed";
+  }
 
   return {
     decision,
-    status: "complete",
+    status,
     advisors,
     chairman: MOCK_CHAIRMAN,
-    totalDurationMs: 4820,
+    totalDurationMs,
   };
 }

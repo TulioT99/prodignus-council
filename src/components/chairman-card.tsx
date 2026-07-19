@@ -41,9 +41,14 @@ export function ChairmanCard({ chairman }: ChairmanCardProps) {
   return (
     <article className="rounded-lg border-2 border-neutral-900 bg-white p-8 shadow-sm">
       <header className="border-b border-neutral-200 pb-6">
-        <p className="text-sm font-semibold uppercase tracking-wide text-neutral-600">
-          Chairman
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-semibold uppercase tracking-wide text-neutral-600">
+            Chairman
+          </p>
+          <span className="rounded border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-neutral-600">
+            Prototype Mock
+          </span>
+        </div>
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="text-2xl font-semibold text-neutral-900">
