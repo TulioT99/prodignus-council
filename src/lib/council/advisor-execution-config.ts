@@ -3,7 +3,7 @@ import "server-only";
 import { councilConfig } from "@/config/council";
 import type { AdvisorExecutionConfig } from "@/types/council";
 
-const LIVE_ADVISOR_EXECUTION: Record<
+export const ADVISOR_EXECUTION_CONFIG: Record<
   (typeof councilConfig.liveAdvisorIds)[number],
   AdvisorExecutionConfig
 > = {
@@ -11,16 +11,39 @@ const LIVE_ADVISOR_EXECUTION: Record<
     advisorId: "ADV-001",
     modelEnvVar: "OPENROUTER_MODEL_CONTRARIAN",
   },
+  "ADV-002": {
+    advisorId: "ADV-002",
+    modelEnvVar: "OPENROUTER_MODEL_PRODUCT_STRATEGY",
+  },
+  "ADV-003": {
+    advisorId: "ADV-003",
+    modelEnvVar: "OPENROUTER_MODEL_UX_ACCESSIBILITY",
+  },
+  "ADV-004": {
+    advisorId: "ADV-004",
+    modelEnvVar: "OPENROUTER_MODEL_DELIVERY_ENGINEERING",
+  },
+  "ADV-005": {
+    advisorId: "ADV-005",
+    modelEnvVar: "OPENROUTER_MODEL_HUMAN_IMPACT",
+  },
 };
 
-export function getLiveAdvisorExecutionConfig(
+export function getAdvisorExecutionConfig(
   advisorId: string,
 ): AdvisorExecutionConfig | undefined {
-  if (!(advisorId in LIVE_ADVISOR_EXECUTION)) {
+  if (!(advisorId in ADVISOR_EXECUTION_CONFIG)) {
     return undefined;
   }
 
-  return LIVE_ADVISOR_EXECUTION[advisorId as keyof typeof LIVE_ADVISOR_EXECUTION];
+  return ADVISOR_EXECUTION_CONFIG[advisorId as keyof typeof ADVISOR_EXECUTION_CONFIG];
+}
+
+/** @deprecated Use getAdvisorExecutionConfig */
+export function getLiveAdvisorExecutionConfig(
+  advisorId: string,
+): AdvisorExecutionConfig | undefined {
+  return getAdvisorExecutionConfig(advisorId);
 }
 
 export const ADVISOR_EXECUTION_ORDER = [

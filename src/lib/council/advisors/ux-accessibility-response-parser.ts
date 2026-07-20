@@ -6,13 +6,15 @@ import {
   ANALYSIS_TITLE_MAX_LENGTH,
   LIST_ITEM_MAX_LENGTH,
   MAX_ANALYSIS_ITEMS,
-  MAX_ASSUMPTIONS,
+  MAX_DOMAIN_LIST_ITEMS,
+  MAX_KEY_ARGUMENTS,
   MAX_RISKS,
+  MAX_UNKNOWNS,
   RECOMMENDATION_MAX_LENGTH,
   SUMMARY_MAX_LENGTH,
   stripMarkdownJsonFence,
 } from "@/lib/council/advisor-response-limits";
-import type { AdvisorResponseContent, CouncilDecision } from "@/types/council";
+import type { CouncilDecision, UxAccessibilityResponseContent } from "@/types/council";
 
 const VALID_RECOMMENDATIONS: CouncilDecision[] = [
   "proceed",
@@ -22,11 +24,11 @@ const VALID_RECOMMENDATIONS: CouncilDecision[] = [
   "insufficient_information",
 ];
 
-export class ModelOutputParseError extends InvalidModelOutputError {}
+export class UxAccessibilityModelOutputParseError extends InvalidModelOutputError {}
 
 function assertPlainObject(value: unknown, label: string): Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new ModelOutputParseError(`${label} must be a JSON object.`);
+    throw new UxAccessibilityModelOutputParseError(`${label} must be a JSON object.`);
   }
 
   return value as Record<string, unknown>;
@@ -38,29 +40,40 @@ function readNonEmptyString(
   maxLength: number,
 ): string {
   if (typeof value !== "string") {
-    throw new ModelOutputParseError(`${fieldName} must be a string.`);
+    throw new UxAccessibilityModelOutputParseError(`${fieldName} must be a string.`);
   }
 
   const trimmed = value.trim();
 
   if (!trimmed) {
-    throw new ModelOutputParseError(`${fieldName} must not be empty.`);
+    throw new UxAccessibilityModelOutputParseError(`${fieldName} must not be empty.`);
   }
 
   if (trimmed.length > maxLength) {
-    throw new ModelOutputParseError(`${fieldName} exceeds the allowed length.`);
+    throw new UxAccessibilityModelOutputParseError(`${fieldName} exceeds the allowed length.`);
   }
 
   return trimmed;
 }
 
-function readStringArray(value: unknown, fieldName: string, maxItems: number): string[] {
+function readStringArray(
+  value: unknown,
+  fieldName: string,
+  maxItems: number,
+  allowEmpty = true,
+): string[] {
   if (!Array.isArray(value)) {
-    throw new ModelOutputParseError(`${fieldName} must be an array.`);
+    throw new UxAccessibilityModelOutputParseError(`${fieldName} must be an array.`);
+  }
+
+  if (!allowEmpty && value.length === 0) {
+    throw new UxAccessibilityModelOutputParseError(`${fieldName} must not be empty.`);
   }
 
   if (value.length > maxItems) {
-    throw new ModelOutputParseError(`${fieldName} must contain at most ${maxItems} items.`);
+    throw new UxAccessibilityModelOutputParseError(
+      `${fieldName} must contain at most ${maxItems} items.`,
+    );
   }
 
   return value.map((item, index) =>
@@ -68,13 +81,15 @@ function readStringArray(value: unknown, fieldName: string, maxItems: number): s
   );
 }
 
-function readAnalysis(value: unknown): AdvisorResponseContent["analysis"] {
+function readAnalysis(value: unknown): UxAccessibilityResponseContent["analysis"] {
   if (!Array.isArray(value) || value.length === 0) {
-    throw new ModelOutputParseError("analysis must be a non-empty array.");
+    throw new UxAccessibilityModelOutputParseError("analysis must be a non-empty array.");
   }
 
   if (value.length > MAX_ANALYSIS_ITEMS) {
-    throw new ModelOutputParseError(`analysis must contain at most ${MAX_ANALYSIS_ITEMS} items.`);
+    throw new UxAccessibilityModelOutputParseError(
+      `analysis must contain at most ${MAX_ANALYSIS_ITEMS} items.`,
+    );
   }
 
   return value.map((item, index) => {
@@ -103,7 +118,9 @@ function readRecommendation(value: unknown): CouncilDecision {
   );
 
   if (!VALID_RECOMMENDATIONS.includes(recommendation as CouncilDecision)) {
-    throw new ModelOutputParseError("recommendation must be a valid council decision.");
+    throw new UxAccessibilityModelOutputParseError(
+      "recommendation must be a valid council decision.",
+    );
   }
 
   return recommendation as CouncilDecision;
@@ -111,17 +128,19 @@ function readRecommendation(value: unknown): CouncilDecision {
 
 function readConfidence(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {
-    throw new ModelOutputParseError("confidence must be a finite number.");
+    throw new UxAccessibilityModelOutputParseError("confidence must be a finite number.");
   }
 
   if (value < 0 || value > 100) {
-    throw new ModelOutputParseError("confidence must be between 0 and 100.");
+    throw new UxAccessibilityModelOutputParseError("confidence must be between 0 and 100.");
   }
 
   return value;
 }
 
-export function parseAdvisorResponseContent(text: string): AdvisorResponseContent {
+export function parseUxAccessibilityResponseContent(
+  text: string,
+): UxAccessibilityResponseContent {
   const normalizedText = stripMarkdownJsonFence(text);
 
   let parsed: unknown;
@@ -129,7 +148,7 @@ export function parseAdvisorResponseContent(text: string): AdvisorResponseConten
   try {
     parsed = JSON.parse(normalizedText);
   } catch {
-    throw new ModelOutputParseError("Model output is not valid JSON.");
+    throw new UxAccessibilityModelOutputParseError("Model output is not valid JSON.");
   }
 
   const record = assertPlainObject(parsed, "model output");
@@ -137,9 +156,16 @@ export function parseAdvisorResponseContent(text: string): AdvisorResponseConten
   return {
     summary: readNonEmptyString(record.summary, "summary", SUMMARY_MAX_LENGTH),
     analysis: readAnalysis(record.analysis),
-    assumptions: readStringArray(record.assumptions, "assumptions", MAX_ASSUMPTIONS),
-    risks: readStringArray(record.risks, "risks", MAX_RISKS),
     recommendation: readRecommendation(record.recommendation),
+    keyArguments: readStringArray(record.keyArguments, "keyArguments", MAX_KEY_ARGUMENTS, false),
+    risks: readStringArray(record.risks, "risks", MAX_RISKS),
+    unknowns: readStringArray(record.unknowns, "unknowns", MAX_UNKNOWNS),
+    accessibilityConcerns: readStringArray(
+      record.accessibilityConcerns,
+      "accessibilityConcerns",
+      MAX_DOMAIN_LIST_ITEMS,
+    ),
+    journeyBarriers: readStringArray(record.journeyBarriers, "journeyBarriers", MAX_DOMAIN_LIST_ITEMS),
     confidence: readConfidence(record.confidence),
   };
 }

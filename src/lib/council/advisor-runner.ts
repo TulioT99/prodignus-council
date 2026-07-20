@@ -1,6 +1,10 @@
 import "server-only";
 
-import { buildAdvisorPrompts } from "@/lib/council/advisor-prompt";
+import {
+  buildAdvisorPromptsForPersona,
+  mapAdvisorResponseToResultFields,
+  parseAdvisorResponseForPersona,
+} from "@/lib/council/advisor-response-router";
 import {
   AdvisorExecutionError,
   CouncilConfigurationError,
@@ -8,14 +12,13 @@ import {
   ProviderTimeoutError,
   toAdvisorSafeMessage,
 } from "@/lib/council/errors";
-import { parseAdvisorResponseContent } from "@/lib/council/response-parser";
 import { callOpenRouter } from "@/lib/openrouter/client";
 import { OpenRouterClientError } from "@/lib/openrouter/types";
 import type {
   AdvisorExecutionConfig,
   AdvisorPersona,
   AdvisorResult,
-  Decision,
+  DecisionContext,
 } from "@/types/council";
 
 const REQUEST_TIMEOUT_MS = 90_000;
@@ -36,6 +39,7 @@ function resolveModel(modelEnvVar: string): string {
 
 function createFailedAdvisorResult(
   persona: AdvisorPersona,
+  executionId: string,
   errorMessage: string,
   durationMs = 0,
   modelLabel = UNCONFIGURED_MODEL_LABEL,
@@ -47,6 +51,7 @@ function createFailedAdvisorResult(
     },
     source: "live",
     status: "failed",
+    executionId,
     summary: "The advisor could not complete this review.",
     analysis: [],
     assumptions: [],
@@ -61,7 +66,8 @@ function createFailedAdvisorResult(
 
 function createSuccessfulAdvisorResult(
   persona: AdvisorPersona,
-  content: ReturnType<typeof parseAdvisorResponseContent>,
+  executionId: string,
+  content: ReturnType<typeof mapAdvisorResponseToResultFields>,
   model: string,
   durationMs: number,
   totalTokens: number,
@@ -73,12 +79,24 @@ function createSuccessfulAdvisorResult(
     },
     source: "live",
     status: "success",
+    executionId,
     summary: content.summary,
     analysis: content.analysis,
     assumptions: content.assumptions,
     risks: content.risks,
     recommendation: content.recommendation,
     confidence: content.confidence / 100,
+    keyArguments: content.keyArguments,
+    unknowns: content.unknowns,
+    accessibilityConcerns: content.accessibilityConcerns,
+    journeyBarriers: content.journeyBarriers,
+    engineeringConcerns: content.engineeringConcerns,
+    operationalConcerns: content.operationalConcerns,
+    technicalAlternatives: content.technicalAlternatives,
+    humanImpact: content.humanImpact,
+    ethicalConcerns: content.ethicalConcerns,
+    inclusionConcerns: content.inclusionConcerns,
+    longTermEffects: content.longTermEffects,
     durationMs,
     totalTokens,
   };
@@ -101,7 +119,7 @@ function mapProviderError(error: OpenRouterClientError): AdvisorExecutionError {
 }
 
 export async function runAdvisor(
-  decision: Decision,
+  decisionContext: DecisionContext,
   persona: AdvisorPersona,
   config: AdvisorExecutionConfig,
 ): Promise<AdvisorResult> {
@@ -116,10 +134,17 @@ export async function runAdvisor(
   try {
     model = resolveModel(config.modelEnvVar);
   } catch (error) {
-    return createFailedAdvisorResult(persona, toAdvisorSafeMessage(error));
+    return createFailedAdvisorResult(
+      persona,
+      decisionContext.executionId,
+      toAdvisorSafeMessage(error),
+    );
   }
 
-  const { systemPrompt, userPrompt } = buildAdvisorPrompts(decision, persona);
+  const { systemPrompt, userPrompt } = buildAdvisorPromptsForPersona(
+    decisionContext,
+    persona,
+  );
 
   try {
     const completion = await callOpenRouter({
@@ -130,10 +155,12 @@ export async function runAdvisor(
       timeoutMs: REQUEST_TIMEOUT_MS,
     });
 
-    const content = parseAdvisorResponseContent(completion.content);
+    const parsed = parseAdvisorResponseForPersona(persona.id, completion.content);
+    const content = mapAdvisorResponseToResultFields(persona.id, parsed);
 
     return createSuccessfulAdvisorResult(
       persona,
+      decisionContext.executionId,
       content,
       completion.model,
       completion.durationMs,
@@ -144,6 +171,7 @@ export async function runAdvisor(
       const mapped = mapProviderError(error);
       return createFailedAdvisorResult(
         persona,
+        decisionContext.executionId,
         mapped.safeMessage,
         0,
         model,
@@ -151,8 +179,13 @@ export async function runAdvisor(
     }
 
     if (error instanceof InvalidModelOutputError) {
+      console.error(
+        `[Council] Advisor response validation failed: advisorId=${persona.id} advisorName="${persona.displayName}" stage=parse error="${error.message}"`,
+      );
+
       return createFailedAdvisorResult(
         persona,
+        decisionContext.executionId,
         error.safeMessage,
         0,
         model,
@@ -160,11 +193,16 @@ export async function runAdvisor(
     }
 
     if (error instanceof CouncilConfigurationError) {
-      return createFailedAdvisorResult(persona, toAdvisorSafeMessage(error));
+      return createFailedAdvisorResult(
+        persona,
+        decisionContext.executionId,
+        toAdvisorSafeMessage(error),
+      );
     }
 
     return createFailedAdvisorResult(
       persona,
+      decisionContext.executionId,
       toAdvisorSafeMessage(error),
       0,
       model,

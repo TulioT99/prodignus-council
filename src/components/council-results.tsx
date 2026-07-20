@@ -36,8 +36,6 @@ interface CouncilResultsProps {
 
 export function CouncilResults({ result }: CouncilResultsProps) {
   const { decision } = result;
-  const liveAdvisorCount = result.advisors.filter((advisor) => advisor.source === "live").length;
-  const mockAdvisorCount = result.advisors.filter((advisor) => advisor.source === "mock").length;
 
   return (
     <section aria-label="Council results" className="space-y-8">
@@ -96,18 +94,31 @@ export function CouncilResults({ result }: CouncilResultsProps) {
             </dd>
           </div>
           <div>
+            <dt className="text-neutral-500">Execution ID</dt>
+            <dd className="mt-1 font-medium text-neutral-900">
+              {result.integrity.executionId}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-neutral-500">Language</dt>
+            <dd className="mt-1 font-medium text-neutral-900">
+              {result.integrity.language}
+            </dd>
+          </div>
+          <div>
             <dt className="text-neutral-500">Advisors</dt>
             <dd className="mt-1 font-medium text-neutral-900">
-              {result.advisors.length}{" "}
-              <span className="font-normal text-neutral-600">
-                ({liveAdvisorCount} live, {mockAdvisorCount} mock)
-              </span>
+              {result.advisors.length} live
             </dd>
           </div>
           <div className="sm:col-span-2">
             <dt className="text-neutral-500">Chairman</dt>
             <dd className="mt-1 font-medium text-neutral-900">
-              Prototype Chairman (static mock, not live analysis)
+              {result.chairman?.status === "success"
+                ? "Live Chairman (synthesized from advisor outputs)"
+                : result.chairman?.status === "failed"
+                  ? "Chairman synthesis failed"
+                  : "Not enabled"}
             </dd>
           </div>
         </dl>

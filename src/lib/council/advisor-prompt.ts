@@ -1,9 +1,27 @@
 import "server-only";
 
-import type { AdvisorPersona, Decision, ThinkingLens } from "@/types/council";
+import {
+  ADVISOR_ALTERNATIVE_WHEN_REJECTING,
+  ADVISOR_CONCISENESS_GUIDANCE,
+  ADVISOR_CONTRARIAN_OUTPUT_LIMITS,
+  ADVISOR_CONTRARIAN_SCHEMA_MAPPING,
+  ADVISOR_DECISION_INTELLIGENCE_GUIDANCE,
+  ADVISOR_DECISION_MINDSET,
+  ADVISOR_FACTS_ASSUMPTIONS_UNKNOWNS,
+  ADVISOR_INCOMPLETE_INFORMATION_GUIDANCE,
+  buildContrarianOutputRequirements,
+  buildDomainBoundaryGuidance,
+  buildJsonFieldDiscipline,
+} from "@/lib/council/advisor-calibration";
+import { assertAdvisorPromptIntegrity } from "@/lib/council/decision-context";
+import type { AdvisorPersona, DecisionContext, ThinkingLens } from "@/types/council";
 
 const THINKING_LENS_LABELS: Record<ThinkingLens, string> = {
   contrarian: "Contrarian",
+  "product-strategy": "Product Strategy",
+  "ux-accessibility": "UX & Accessibility",
+  "delivery-engineering": "Delivery Engineering",
+  "human-impact": "Human Impact",
   "first-principles": "First Principles",
   expansionist: "Expansionist",
   outsider: "Outsider",
@@ -32,7 +50,8 @@ function buildLensInstructions(thinkingLens: ThinkingLens): string {
 - Construct the strongest grounded case against proceeding as currently proposed.
 - Identify hidden costs, failure modes, and unintended consequences.
 - Define conditions that would reduce risk.
-- Do not reject merely for the sake of disagreement.`;
+- Do not reject merely for the sake of disagreement.
+- Stay independent: do not duplicate product, UX, engineering, or human impact analysis from other Advisors.`;
 
     case "first-principles":
       return `Lens-specific instructions:
@@ -61,6 +80,22 @@ function buildLensInstructions(thinkingLens: ThinkingLens): string {
 - Define the smallest executable experiment that would reduce uncertainty.
 - Identify dependencies, owners, measurable outcomes, and go/no-go criteria.
 - Assess whether the team can operate the proposed path responsibly.`;
+
+    case "product-strategy":
+      throw new Error("Product strategy prompts are handled by the dedicated advisor module.");
+
+    case "ux-accessibility":
+      throw new Error(
+        "UX and accessibility prompts are handled by the dedicated advisor module.",
+      );
+
+    case "delivery-engineering":
+      throw new Error(
+        "Delivery engineering prompts are handled by the dedicated advisor module.",
+      );
+
+    case "human-impact":
+      throw new Error("Human impact prompts are handled by the dedicated advisor module.");
   }
 }
 
@@ -83,8 +118,18 @@ Core beliefs:
 ${beliefs}`;
 }
 
+function formatAttachments(context: DecisionContext): string {
+  if (context.attachments.length === 0) {
+    return "(none provided)";
+  }
+
+  return context.attachments
+    .map((attachment) => `- ${attachment.name} (${attachment.mimeType})`)
+    .join("\n");
+}
+
 export function buildAdvisorPrompts(
-  decision: Decision,
+  decisionContext: DecisionContext,
   persona: AdvisorPersona,
 ): {
   systemPrompt: string;
@@ -95,22 +140,55 @@ export function buildAdvisorPrompts(
 Shared advisor responsibility:
 
 - Independently assess the decision through your assigned thinking lens.
+- Analyze only the decision context provided below. Do not substitute unrelated examples or prior cases.
 - Distinguish facts contained in the decision context from assumptions, inferences, and unknowns requiring evidence.
 - Identify risks, hidden costs, and implementation implications relevant to your lens.
-- Do not invent statistics, laws, research findings, or facts not provided in the decision.
-- Provide a clear recommendation covering whether to proceed, required conditions or safeguards, and the next practical step.
+- Do not invent statistics, laws, research findings, or facts not provided in the decision context.
+- Provide a clear, explicit recommendation for the Executive Committee.
 - Return only valid JSON matching the required schema.
+
+${ADVISOR_DECISION_MINDSET}
+
+${ADVISOR_CONCISENESS_GUIDANCE}
+
+${ADVISOR_FACTS_ASSUMPTIONS_UNKNOWNS}
+
+${ADVISOR_CONTRARIAN_OUTPUT_LIMITS}
+
+${ADVISOR_CONTRARIAN_SCHEMA_MAPPING}
+
+${buildJsonFieldDiscipline({
+  requiredNonEmptyArrays: ["analysis"],
+})}
+
+${ADVISOR_ALTERNATIVE_WHEN_REJECTING}
+
+${ADVISOR_DECISION_INTELLIGENCE_GUIDANCE}
+
+${buildDomainBoundaryGuidance("your assigned thinking lens", [
+  "detailed product strategy (Product Strategy Advisor)",
+  "UX and accessibility journeys (UX & Accessibility Advisor)",
+  "engineering delivery (Delivery Engineering Advisor)",
+  "human outcomes and equity (Human Impact Advisor)",
+])}
+
+${ADVISOR_INCOMPLETE_INFORMATION_GUIDANCE}
 
 ${buildLensInstructions(persona.thinkingLens)}`;
 
   const userPrompt = `Review the following decision and respond as ${persona.displayName}.
 
-Decision ID: ${decision.id}
-Title: ${decision.title}
-Question: ${decision.question}
-Context: ${decision.context || "(none provided)"}
-Constraints: ${decision.constraints || "(none provided)"}
-Status: ${decision.status}
+Execution ID: ${decisionContext.executionId}
+Language: ${decisionContext.language}
+Decision ID: ${decisionContext.decisionId}
+Title: ${decisionContext.title}
+Question: ${decisionContext.question}
+Context: ${decisionContext.context || "(none provided)"}
+Objectives: ${decisionContext.objectives || "(none provided)"}
+Constraints: ${decisionContext.constraints || "(none provided)"}
+Attachments:
+${formatAttachments(decisionContext)}
+Status: ${decisionContext.status}
 
 Return JSON matching this schema exactly:
 
@@ -118,11 +196,20 @@ ${ADVISOR_RESPONSE_SCHEMA}
 
 Requirements:
 
-- Provide at least one analysis item with non-empty title and description.
-- List explicit assumptions and risks as string arrays (use empty arrays if none).
-- recommendation must be one of the allowed enum values and reflect whether to proceed, any conditions or safeguards, and the next practical step.
-- confidence must be a finite number from 0 to 100.
-- Do not include markdown fences or any text outside the JSON object.`;
+${buildContrarianOutputRequirements()}`;
+
+  assertAdvisorPromptIntegrity(decisionContext, userPrompt);
 
   return { systemPrompt, userPrompt };
 }
+
+export const ADVISOR_PROMPT_MARKERS = {
+  schemaMappingMarkers: [
+    "not keyArguments or unknowns",
+    "Do not add keyArguments or unknowns",
+  ],
+  jsonFieldDisciplineMarkers: [
+    "Every array field in the schema must appear",
+    "confidence value must be a JSON number",
+  ],
+} as const;

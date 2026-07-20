@@ -23,6 +23,10 @@ function ListSection({
   title: string;
   items: string[];
 }) {
+  if (items.length === 0) {
+    return null;
+  }
+
   return (
     <section>
       <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-700">
@@ -38,6 +42,8 @@ function ListSection({
 }
 
 export function ChairmanCard({ chairman }: ChairmanCardProps) {
+  const isFailed = chairman.status === "failed";
+
   return (
     <article className="rounded-lg border-2 border-neutral-900 bg-white p-8 shadow-sm">
       <header className="border-b border-neutral-200 pb-6">
@@ -45,8 +51,14 @@ export function ChairmanCard({ chairman }: ChairmanCardProps) {
           <p className="text-sm font-semibold uppercase tracking-wide text-neutral-600">
             Chairman
           </p>
-          <span className="rounded border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-neutral-600">
-            Prototype Chairman
+          <span
+            className={
+              isFailed
+                ? "rounded border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-red-800"
+                : "rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold uppercase tracking-wide text-emerald-800"
+            }
+          >
+            {isFailed ? "Synthesis Failed" : "Live AI"}
           </span>
         </div>
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
@@ -67,43 +79,44 @@ export function ChairmanCard({ chairman }: ChairmanCardProps) {
         </div>
       </header>
 
-      <div className="mt-6 space-y-6">
-        <section>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-700">
-            Executive Summary
-          </h3>
-          <p className="mt-3 text-base leading-7 text-neutral-800">
-            {chairman.executiveSummary}
-          </p>
-        </section>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <ListSection title="Areas of Agreement" items={chairman.areasOfAgreement} />
-          <ListSection
-            title="Areas of Disagreement"
-            items={chairman.areasOfDisagreement}
-          />
-          <ListSection
-            title="Critical Assumptions"
-            items={chairman.criticalAssumptions}
-          />
-          <ListSection title="Principal Risks" items={chairman.principalRisks} />
-          <ListSection title="Upside" items={chairman.upside} />
-          <ListSection
-            title="Recommended Actions"
-            items={chairman.recommendedActions}
-          />
+      {isFailed ? (
+        <div
+          role="alert"
+          className="mt-6 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+        >
+          {chairman.errorMessage ??
+            "The Chairman could not complete the council synthesis."}
         </div>
+      ) : (
+        <div className="mt-6 space-y-6">
+          <section>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-700">
+              Executive Summary
+            </h3>
+            <p className="mt-3 text-base leading-7 text-neutral-800">
+              {chairman.executiveSummary}
+            </p>
+          </section>
 
-        <section className="rounded-md border border-neutral-200 bg-neutral-50 p-5">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-700">
-            Final Recommendation
-          </h3>
-          <p className="mt-3 text-base leading-7 text-neutral-900">
-            {chairman.finalRecommendation}
-          </p>
-        </section>
-      </div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <ListSection title="Consensus" items={chairman.consensus} />
+            <ListSection title="Disagreements" items={chairman.disagreements} />
+            <ListSection title="Key Arguments" items={chairman.keyArguments} />
+            <ListSection title="Risks" items={chairman.risks} />
+            <ListSection title="Conditions" items={chairman.conditions} />
+            <ListSection title="Next Steps" items={chairman.nextSteps} />
+          </div>
+
+          <section className="rounded-md border border-neutral-200 bg-neutral-50 p-5">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-700">
+              Final Recommendation
+            </h3>
+            <p className="mt-3 text-base leading-7 text-neutral-900">
+              {chairman.finalRecommendation}
+            </p>
+          </section>
+        </div>
+      )}
     </article>
   );
 }

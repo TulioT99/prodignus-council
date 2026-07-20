@@ -1,10 +1,13 @@
 export type ThinkingLens =
   | "contrarian"
+  | "product-strategy"
+  | "ux-accessibility"
+  | "delivery-engineering"
+  | "human-impact"
   | "first-principles"
   | "expansionist"
   | "outsider"
   | "executor";
-
 export type AdvisorStatus = "idle" | "running" | "success" | "failed";
 
 export type CouncilDecision =
@@ -21,6 +24,35 @@ export type DecisionStatus =
   | "archived";
 
 export type CouncilSessionStatus = "complete" | "partial" | "failed";
+
+export type DecisionContextAttachment = {
+  id: string;
+  name: string;
+  mimeType: string;
+};
+
+export type DecisionContext = {
+  readonly executionId: string;
+  readonly decisionId: string;
+  readonly title: string;
+  readonly question: string;
+  readonly language: string;
+  readonly context: string;
+  readonly constraints: string;
+  readonly objectives?: string;
+  readonly attachments: readonly DecisionContextAttachment[];
+  readonly timestamp: string;
+  readonly status: DecisionStatus;
+  readonly owner?: string;
+};
+
+export type CouncilIntegrityDiagnostics = {
+  executionId: string;
+  question: string;
+  language: string;
+  contextDigest: string;
+  advisorIds: string[];
+};
 
 export type Decision = {
   id: string;
@@ -59,6 +91,56 @@ export type AdvisorAnalysisItem = {
   description: string;
 };
 
+export type HumanImpactResponseContent = {
+  summary: string;
+  analysis: AdvisorAnalysisItem[];
+  recommendation: CouncilDecision;
+  keyArguments: string[];
+  risks: string[];
+  unknowns: string[];
+  humanImpact: string[];
+  ethicalConcerns: string[];
+  inclusionConcerns: string[];
+  longTermEffects: string[];
+  confidence: number;
+};
+
+export type DeliveryEngineeringResponseContent = {
+  summary: string;
+  analysis: AdvisorAnalysisItem[];
+  recommendation: CouncilDecision;
+  keyArguments: string[];
+  risks: string[];
+  unknowns: string[];
+  engineeringConcerns: string[];
+  operationalConcerns: string[];
+  technicalAlternatives: string[];
+  confidence: number;
+};
+
+export type UxAccessibilityResponseContent = {
+  summary: string;
+  analysis: AdvisorAnalysisItem[];
+  recommendation: CouncilDecision;
+  keyArguments: string[];
+  risks: string[];
+  unknowns: string[];
+  accessibilityConcerns: string[];
+  journeyBarriers: string[];
+  confidence: number;
+};
+
+export type ProductStrategyResponseContent = {
+  summary: string;
+  analysis: AdvisorAnalysisItem[];
+  recommendation: CouncilDecision;
+  keyArguments: string[];
+  risks: string[];
+  assumptions: string[];
+  unknowns: string[];
+  confidence: number;
+};
+
 export type AdvisorResponseContent = {
   summary: string;
   analysis: AdvisorAnalysisItem[];
@@ -74,12 +156,24 @@ export type AdvisorResult = {
   persona: AdvisorPersona;
   source: AdvisorSource;
   status: AdvisorStatus;
+  executionId: string;
   summary: string;
   analysis: AdvisorAnalysisItem[];
   assumptions: string[];
   risks: string[];
   recommendation: CouncilDecision;
   confidence: number;
+  keyArguments?: string[];
+  unknowns?: string[];
+  accessibilityConcerns?: string[];
+  journeyBarriers?: string[];
+  engineeringConcerns?: string[];
+  operationalConcerns?: string[];
+  technicalAlternatives?: string[];
+  humanImpact?: string[];
+  ethicalConcerns?: string[];
+  inclusionConcerns?: string[];
+  longTermEffects?: string[];
   durationMs: number;
   totalTokens: number;
   errorMessage?: string;
@@ -119,21 +213,43 @@ export type CouncilApiFailure = {
 
 export type CouncilApiResponse = CouncilApiSuccess | CouncilApiFailure;
 
+export type ChairmanStatus = "success" | "failed";
+
+export type ChairmanResponseContent = {
+  executiveSummary: string;
+  finalRecommendation: string;
+  decision: CouncilDecision;
+  consensus: string[];
+  disagreements: string[];
+  keyArguments: string[];
+  risks: string[];
+  conditions: string[];
+  nextSteps: string[];
+  confidence: number;
+};
+
 export type ChairmanResult = {
+  status: ChairmanStatus;
+  executionId: string;
   decision: CouncilDecision;
   executiveSummary: string;
-  areasOfAgreement: string[];
-  areasOfDisagreement: string[];
-  criticalAssumptions: string[];
-  principalRisks: string[];
-  upside: string[];
-  recommendedActions: string[];
   finalRecommendation: string;
+  consensus: string[];
+  disagreements: string[];
+  keyArguments: string[];
+  risks: string[];
+  conditions: string[];
+  nextSteps: string[];
   confidence: number;
+  durationMs: number;
+  totalTokens: number;
+  errorMessage?: string;
 };
 
 export type CouncilResult = {
   decision: Decision;
+  decisionContext: DecisionContext;
+  integrity: CouncilIntegrityDiagnostics;
   status: CouncilSessionStatus;
   advisors: AdvisorResult[];
   chairman?: ChairmanResult;

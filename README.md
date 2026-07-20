@@ -1,6 +1,6 @@
 # Prodignus Decision Council
 
-A hybrid decision-support application where five advisor personas challenge a decision before a Chairman consolidates a recommendation.
+A decision-support application where five advisor personas challenge a decision before a Chairman consolidates a recommendation.
 
 ## Getting Started
 
@@ -21,6 +21,11 @@ cp .env.example .env.local
 ```env
 OPENROUTER_API_KEY=your_key_here
 OPENROUTER_MODEL_CONTRARIAN=anthropic/claude-3.5-sonnet
+OPENROUTER_MODEL_PRODUCT_STRATEGY=anthropic/claude-3.5-sonnet
+OPENROUTER_MODEL_UX_ACCESSIBILITY=anthropic/claude-3.5-sonnet
+OPENROUTER_MODEL_DELIVERY_ENGINEERING=anthropic/claude-3.5-sonnet
+OPENROUTER_MODEL_HUMAN_IMPACT=anthropic/claude-3.5-sonnet
+OPENROUTER_MODEL_CHAIRMAN=anthropic/claude-3.5-sonnet
 ```
 
 4. Run the development server:
@@ -31,9 +36,23 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Sprint 3 Architecture
+## Decision Context Invariant
 
-Sprint 3 refactors the Council into a server-side orchestration layer. The browser submits a `Decision` and receives a fully assembled `CouncilResult`.
+Every Council execution creates exactly one immutable `DecisionContext` shared by all Advisors and the Chairman.
+
+The orchestrator builds this context once per request. Every advisor runner and the chairman runner receive the same:
+
+- execution ID
+- question
+- language
+- context, objectives, and constraints
+- attachments (future-ready)
+
+Only the advisor perspective (persona and thinking lens) may differ between advisors.
+
+## Architecture
+
+The browser submits a `Decision` and receives a fully assembled `CouncilResult`.
 
 ### Request flow
 
@@ -42,18 +61,21 @@ flowchart TD
   Browser["Browser (page.tsx)"]
   API["POST /api/council"]
   Orchestrator["Council Orchestrator"]
+  Context["Decision Context"]
   Runner["Advisor Runner"]
   Prompts["Advisor Prompt Builder"]
   OpenRouter["OpenRouter API"]
-  Mocks["Mock Advisor Factory"]
+  ChairmanRunner["Chairman Runner"]
   Result["CouncilResult"]
 
   Browser -->|Decision| API
   API --> Orchestrator
-  Orchestrator -->|ADV-001 live| Runner
-  Orchestrator -->|ADV-002..005| Mocks
+  Orchestrator --> Context
+  Orchestrator -->|all advisors| Runner
   Runner --> Prompts
   Runner --> OpenRouter
+  Orchestrator --> ChairmanRunner
+  ChairmanRunner --> OpenRouter
   Orchestrator --> Result
   API -->|CouncilResult| Browser
 ```
@@ -63,32 +85,42 @@ flowchart TD
 | Component | Location | Role |
 |-----------|----------|------|
 | Primary API | `src/app/api/council/route.ts` | Validates input, invokes orchestrator, returns structured JSON |
-| Orchestrator | `src/lib/council/orchestrator.ts` | Runs live and mock advisors, attaches Chairman, computes session status |
+| Decision Context | `src/lib/council/decision-context.ts` | Creates immutable shared execution context and integrity diagnostics |
+| Orchestrator | `src/lib/council/orchestrator.ts` | Creates one Decision Context, runs all advisors, invokes Chairman |
 | Advisor Runner | `src/lib/council/advisor-runner.ts` | Generic live advisor execution via OpenRouter |
-| Prompt Builder | `src/lib/council/advisor-prompt.ts` | Builds prompts from `AdvisorPersona` and thinking lens |
-| Mock Factory | `src/data/mock-council-result.ts` | Returns fresh prototype advisor and Chairman results |
+| Chairman Runner | `src/lib/council/chairman-runner.ts` | Synthesizes advisor outputs into a Chairman recommendation via OpenRouter |
+| Prompt Builder | `src/lib/council/advisor-prompt.ts` | Builds prompts from shared Decision Context and advisor persona |
+| Chairman Prompt | `src/lib/council/chairman-prompt.ts` | Builds Chairman synthesis prompt from Decision Context and advisor results |
 | OpenRouter Client | `src/lib/openrouter/client.ts` | Persona-agnostic, non-streaming chat completions |
 
-### Hybrid execution mode
+### Live execution mode
 
 - **ADV-001 (The Contrarian)** — live OpenRouter model via `OPENROUTER_MODEL_CONTRARIAN`
-- **ADV-002 to ADV-005** — static prototype mocks
-- **Chairman** — static prototype mock (does not analyze live advisor output)
+- **ADV-002 (The Product Strategy Advisor)** — dedicated product strategy prompt and parser via `OPENROUTER_MODEL_PRODUCT_STRATEGY`
+- **ADV-003 (The UX & Accessibility Advisor)** — dedicated UX and accessibility prompt and parser via `OPENROUTER_MODEL_UX_ACCESSIBILITY`
+- **ADV-004 (The Delivery Engineering Advisor)** — dedicated delivery engineering prompt and parser via `OPENROUTER_MODEL_DELIVERY_ENGINEERING`
+- **ADV-005 (The Human Impact Advisor)** — dedicated human impact prompt and parser via `OPENROUTER_MODEL_HUMAN_IMPACT`
+- **Chairman** — live OpenRouter model via `OPENROUTER_MODEL_CHAIRMAN`
 
-Configuration lives in `src/config/council.ts` (non-secret metadata only). Model environment variable mapping is server-only in `src/lib/council/advisor-execution-config.ts`.
+Configuration lives in `src/config/council.ts` (non-secret metadata only). Model environment variable mapping is server-only in `src/lib/council/advisor-execution-config.ts` and `src/lib/council/chairman-execution-config.ts`.
 
 ### Error behavior
 
 - **Invalid request** → HTTP 400, `ok: false`, no `CouncilResult`
-- **Live advisor provider failure** → HTTP 200, `ok: true`, partial `CouncilResult` with failed ADV-001 and successful mocks
+- **Advisor or Chairman provider failure** → HTTP 200, `ok: true`, partial `CouncilResult` with failed participants recorded explicitly
 - **Orchestrator crash** → HTTP 500, `ok: false`
 
 ### Environment variables
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `OPENROUTER_API_KEY` | Yes (for live advisor) | OpenRouter authentication |
-| `OPENROUTER_MODEL_CONTRARIAN` | Yes (for live advisor) | Model ID for ADV-001 |
+| `OPENROUTER_API_KEY` | Yes | OpenRouter authentication |
+| `OPENROUTER_MODEL_CONTRARIAN` | Yes | Model ID for ADV-001 |
+| `OPENROUTER_MODEL_PRODUCT_STRATEGY` | Yes | Model ID for ADV-002 (Product Strategy Advisor) |
+| `OPENROUTER_MODEL_UX_ACCESSIBILITY` | Yes | Model ID for ADV-003 (UX & Accessibility Advisor) |
+| `OPENROUTER_MODEL_DELIVERY_ENGINEERING` | Yes | Model ID for ADV-004 (Delivery Engineering Advisor) |
+| `OPENROUTER_MODEL_HUMAN_IMPACT` | Yes | Model ID for ADV-005 (Human Impact Advisor) |
+| `OPENROUTER_MODEL_CHAIRMAN` | Yes | Model ID for Chairman synthesis |
 
 `.env.local` is git-ignored. Never commit secrets.
 
@@ -98,15 +130,16 @@ Configuration lives in `src/config/council.ts` (non-secret metadata only). Model
 npm run dev      # Development server
 npm run build    # Production build
 npm run lint     # ESLint
-npm run test     # Lightweight council status unit tests
+npm run test     # Council integrity, chairman, and orchestration tests
 ```
 
 ### Limitations
 
 - No persistence, authentication, streaming, retries, or peer review
-- Only one live advisor (ADV-001)
-- Chairman remains a static prototype
+- All advisors require configured OpenRouter models
+- Chairman depends on available advisor outputs; synthesis quality varies when advisors fail
 - No user-selectable models
+- Attachments are modeled but not yet implemented
 
 ## Learn More
 
