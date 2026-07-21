@@ -83,6 +83,115 @@ afterEach(() => {
   mock.restoreAll();
 });
 
+const sampleAdvisorsForSessionStatus = [
+  sampleAdvisor,
+  {
+    ...sampleAdvisor,
+    persona: { ...sampleAdvisor.persona, id: "ADV-003", displayName: "The UX Advisor" },
+    status: "success",
+  },
+  {
+    ...sampleAdvisor,
+    persona: { ...sampleAdvisor.persona, id: "ADV-004", displayName: "The Engineering Advisor" },
+    status: "success",
+  },
+  {
+    ...sampleAdvisor,
+    persona: { ...sampleAdvisor.persona, id: "ADV-005", displayName: "The Human Impact Advisor" },
+    status: "failed",
+    errorMessage: "The advisor could not complete this review.",
+  },
+  {
+    ...sampleAdvisor,
+    persona: { ...sampleAdvisor.persona, id: "ADV-001", displayName: "The Contrarian" },
+    status: "failed",
+    errorMessage: "The model provider did not respond within the allowed time.",
+  },
+];
+
+test("TC-018: session status preservation after context-build failure", async () => {
+  const { createDecisionContext } = await import("../src/lib/council/decision-context.ts");
+  const { determineCouncilSessionStatus } = await import("../src/lib/council/council-status.ts");
+  const { councilConfig } = await import("../src/config/council.ts");
+  const { runChairman } = await import("../src/lib/council/chairman-runner.ts");
+
+  const advisorsBefore = structuredClone(sampleAdvisorsForSessionStatus);
+  const expectedSessionStatus = determineCouncilSessionStatus(
+    advisorsBefore,
+    councilConfig.liveAdvisorIds,
+    councilConfig.minimumSuccessfulAdvisors,
+  );
+
+  const buildFailureContext = createDecisionContext(
+    { ...sampleDecision, question: "   " },
+    { executionId: "EXEC-SHARED-001" },
+  );
+  const buildFailureResult = await runChairman(buildFailureContext, advisorsBefore);
+
+  assert.equal(buildFailureResult.status, "failed");
+  assert.equal(buildFailureResult.executionId, "EXEC-SHARED-001");
+  assert.match(buildFailureResult.errorMessage ?? "", /question is required/i);
+  assert.deepEqual(
+    determineCouncilSessionStatus(
+      advisorsBefore,
+      councilConfig.liveAdvisorIds,
+      councilConfig.minimumSuccessfulAdvisors,
+    ),
+    expectedSessionStatus,
+  );
+  assert.deepEqual(advisorsBefore, sampleAdvisorsForSessionStatus);
+
+  globalThis.fetch = mock.fn(async () =>
+    createOpenRouterResponse({ invalid: true }),
+  );
+
+  const providerFailureContext = createDecisionContext(sampleDecision, {
+    executionId: "EXEC-SHARED-001",
+  });
+  const advisorsForProviderFailure = structuredClone(sampleAdvisorsForSessionStatus);
+  const providerFailureResult = await runChairman(
+    providerFailureContext,
+    advisorsForProviderFailure,
+  );
+
+  assert.equal(providerFailureResult.status, "failed");
+  assert.equal(providerFailureResult.executionId, "EXEC-SHARED-001");
+  assert.ok(providerFailureResult.errorMessage);
+  assert.deepEqual(
+    determineCouncilSessionStatus(
+      advisorsForProviderFailure,
+      councilConfig.liveAdvisorIds,
+      councilConfig.minimumSuccessfulAdvisors,
+    ),
+    expectedSessionStatus,
+  );
+  assert.equal(
+    determineCouncilSessionStatus(
+      advisorsBefore,
+      councilConfig.liveAdvisorIds,
+      councilConfig.minimumSuccessfulAdvisors,
+    ),
+    determineCouncilSessionStatus(
+      advisorsForProviderFailure,
+      councilConfig.liveAdvisorIds,
+      councilConfig.minimumSuccessfulAdvisors,
+    ),
+  );
+});
+
+test("runChairman returns failed result when context build input is invalid", async () => {
+  const { createDecisionContext } = await import("../src/lib/council/decision-context.ts");
+  const { runChairman } = await import("../src/lib/council/chairman-runner.ts");
+  const decisionContext = createDecisionContext({ ...sampleDecision, question: "   " }, {
+    executionId: "EXEC-SHARED-001",
+  });
+  const result = await runChairman(decisionContext, [sampleAdvisor]);
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.executionId, "EXEC-SHARED-001");
+  assert.match(result.errorMessage ?? "", /question is required/i);
+});
+
 test("runChairman returns structured ChairmanResult on success", async () => {
   globalThis.fetch = mock.fn(async () => createOpenRouterResponse(validChairmanPayload));
 

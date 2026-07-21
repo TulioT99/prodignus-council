@@ -1,5 +1,7 @@
 import "server-only";
 
+import { defaultChairmanContextBuilder } from "@/lib/council/chairman-context-builder";
+import { ChairmanContextBuildError } from "@/lib/council/chairman-context.errors";
 import { buildChairmanPrompts } from "@/lib/council/chairman-prompt";
 import { CHAIRMAN_MODEL_ENV_VAR } from "@/lib/council/chairman-execution-config";
 import { parseChairmanResponseContent } from "@/lib/council/chairman-response-parser";
@@ -90,7 +92,25 @@ export async function runChairman(
     );
   }
 
-  const { systemPrompt, userPrompt } = buildChairmanPrompts(decisionContext, advisors);
+  let systemPrompt: string;
+  let userPrompt: string;
+
+  try {
+    const chairmanContext = defaultChairmanContextBuilder.build({
+      decisionContext,
+      advisors,
+    });
+    ({ systemPrompt, userPrompt } = buildChairmanPrompts(chairmanContext));
+  } catch (error) {
+    if (error instanceof ChairmanContextBuildError) {
+      return createFailedChairmanResult(decisionContext.executionId, error.safeMessage);
+    }
+
+    return createFailedChairmanResult(
+      decisionContext.executionId,
+      toAdvisorSafeMessage(error),
+    );
+  }
 
   try {
     const completion = await callOpenRouter({
