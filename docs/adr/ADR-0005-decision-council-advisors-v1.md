@@ -1,5 +1,7 @@
 # ADR-0005: Decision Council Advisors v1.0
 
+**Related Operations Standard:** OPS-0001 — Engineering Workflow Standard
+
 ## Status
 
 Accepted
@@ -52,3 +54,16 @@ Future functional improvements should be implemented primarily in the Chairman l
 ## Advisor Layer Status
 
 Version 1.0
+
+---
+
+## Related Documentation
+
+- [OPS-0001 — Engineering Workflow Standard](../ops/OPS-0001-engineering-workflow-standard.md)
+- [ADR-0003 — Collective Intelligence Layer](../adr/ADR-0003-collective-intelligence-layer.md)
+- [ENG-0002 — ChairmanContextBuilder Technical Specification](../eng/ENG-0002-chairman-context-builder-technical-specification.md)
+- [ARR-0001 — Architecture Readiness Review](../arr/ARR-0001-architecture-readiness-review.md)
+- [IMP-0002 — ChairmanContextBuilder Implementation Plan](../imp/IMP-0002-chairman-context-builder-implementation-plan.md)
+- [AIR-0001 — ChairmanContextBuilder Architecture Implementation Review](../air/AIR-0001-chairman-context-builder-architecture-implementation-review.md)
+- [ICR-0002 — ChairmanContextBuilder Implementation Completion Report](../icr/ICR-0002-chairman-context-builder-implementation-completion-report.md)
+- [Documentation Index](../README.md)

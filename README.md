@@ -50,6 +50,14 @@ The orchestrator builds this context once per request. Every advisor runner and 
 
 Only the advisor perspective (persona and thinking lens) may differ between advisors.
 
+## Documentation
+
+Engineering documentation follows the [OPS-0001 — Engineering Workflow Standard](docs/ops/OPS-0001-engineering-workflow-standard.md).
+
+See the [documentation index](docs/README.md) for ADRs, engineering specifications, architecture readiness reviews, implementation plans, architecture implementation reviews, completion reports, and related governance artifacts.
+
+Sprint 6 governance chain: [ADR-0003](docs/adr/ADR-0003-collective-intelligence-layer.md) → [ENG-0002](docs/eng/ENG-0002-chairman-context-builder-technical-specification.md) → [ARR-0001](docs/arr/ARR-0001-architecture-readiness-review.md) → [IMP-0002](docs/imp/IMP-0002-chairman-context-builder-implementation-plan.md) → [AIR-0001](docs/air/AIR-0001-chairman-context-builder-architecture-implementation-review.md) → [ICR-0002](docs/icr/ICR-0002-chairman-context-builder-implementation-completion-report.md).
+
 ## Architecture
 
 The browser submits a `Decision` and receives a fully assembled `CouncilResult`.
@@ -62,10 +70,14 @@ flowchart TD
   API["POST /api/council"]
   Orchestrator["Council Orchestrator"]
   Context["Decision Context"]
+  Advisors["Advisor Results"]
   Runner["Advisor Runner"]
   Prompts["Advisor Prompt Builder"]
   OpenRouter["OpenRouter API"]
+  ContextBuilder["Chairman Context Builder"]
+  ChairmanContext["Chairman Context"]
   ChairmanRunner["Chairman Runner"]
+  ChairmanPrompt["Chairman Prompt Builder"]
   Result["CouncilResult"]
 
   Browser -->|Decision| API
@@ -75,6 +87,12 @@ flowchart TD
   Runner --> Prompts
   Runner --> OpenRouter
   Orchestrator --> ChairmanRunner
+  ChairmanRunner --> ContextBuilder
+  Context --> ContextBuilder
+  Advisors --> ContextBuilder
+  ContextBuilder --> ChairmanContext
+  ChairmanContext --> ChairmanPrompt
+  ChairmanRunner --> ChairmanPrompt
   ChairmanRunner --> OpenRouter
   Orchestrator --> Result
   API -->|CouncilResult| Browser
@@ -88,9 +106,11 @@ flowchart TD
 | Decision Context | `src/lib/council/decision-context.ts` | Creates immutable shared execution context and integrity diagnostics |
 | Orchestrator | `src/lib/council/orchestrator.ts` | Creates one Decision Context, runs all advisors, invokes Chairman |
 | Advisor Runner | `src/lib/council/advisor-runner.ts` | Generic live advisor execution via OpenRouter |
-| Chairman Runner | `src/lib/council/chairman-runner.ts` | Synthesizes advisor outputs into a Chairman recommendation via OpenRouter |
+| Chairman Context Builder | `src/lib/council/chairman-context-builder.ts` | Builds structured `ChairmanContext` from `DecisionContext` and advisor results |
+| Chairman Context Types | `src/lib/council/chairman-context.types.ts` | Versioned Chairman context contract and build input |
+| Chairman Runner | `src/lib/council/chairman-runner.ts` | Builds Chairman context, synthesizes advisor outputs via OpenRouter |
 | Prompt Builder | `src/lib/council/advisor-prompt.ts` | Builds prompts from shared Decision Context and advisor persona |
-| Chairman Prompt | `src/lib/council/chairman-prompt.ts` | Builds Chairman synthesis prompt from Decision Context and advisor results |
+| Chairman Prompt | `src/lib/council/chairman-prompt.ts` | Builds Chairman synthesis prompt from `ChairmanContext` |
 | OpenRouter Client | `src/lib/openrouter/client.ts` | Persona-agnostic, non-streaming chat completions |
 
 ### Live execution mode
