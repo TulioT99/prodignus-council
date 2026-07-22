@@ -16,6 +16,7 @@ export type OpenRouterUsage = {
   prompt_tokens?: number;
   completion_tokens?: number;
   total_tokens?: number;
+  cost?: number;
 };
 
 export type OpenRouterChatCompletionChoice = {
@@ -42,6 +43,8 @@ export type OpenRouterCompletionResult = {
   completionTokens: number;
   totalTokens: number;
   durationMs: number;
+  estimatedCostUsd?: number;
+  retryCount: number;
 };
 
 export type OpenRouterClientErrorCode =

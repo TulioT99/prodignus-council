@@ -176,6 +176,9 @@ export type AdvisorResult = {
   longTermEffects?: string[];
   durationMs: number;
   totalTokens: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  estimatedCostUsd?: number;
   errorMessage?: string;
 };
 

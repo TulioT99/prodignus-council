@@ -4,7 +4,10 @@ import {
   ADVISOR_EXECUTION_ORDER,
   getAdvisorExecutionConfig,
 } from "@/lib/council/advisor-execution-config";
-import { runAdvisor } from "@/lib/council/advisor-runner";
+import {
+  createUnexpectedAdvisorFailureResult,
+  runAdvisor,
+} from "@/lib/council/advisor-runner";
 import { runChairman } from "@/lib/council/chairman-runner";
 import { determineCouncilSessionStatus } from "@/lib/council/council-status";
 import {
@@ -29,6 +32,28 @@ async function resolveAdvisorResult(
   return runAdvisor(decisionContext, persona, executionConfig);
 }
 
+function resolveSettledAdvisorResult(
+  settled: PromiseSettledResult<AdvisorResult>,
+  advisorId: string,
+  executionId: string,
+): AdvisorResult {
+  if (settled.status === "fulfilled") {
+    return settled.value;
+  }
+
+  const persona = getAdvisorPersonaById(advisorId);
+
+  console.error(
+    `[Council] Unexpected advisor rejection: advisorId=${advisorId} reason="${settled.reason instanceof Error ? settled.reason.message : "unknown"}"`,
+  );
+
+  return createUnexpectedAdvisorFailureResult(
+    persona,
+    executionId,
+    "The advisor could not complete this review.",
+  );
+}
+
 export async function runCouncil(decision: Decision): Promise<CouncilResult> {
   const decisionContext = createDecisionContext(decision);
   const integrity = recordDecisionContextIntegrity(
@@ -36,9 +61,17 @@ export async function runCouncil(decision: Decision): Promise<CouncilResult> {
     ADVISOR_EXECUTION_ORDER,
   );
 
-  const advisorResults = await Promise.all(
+  const settledResults = await Promise.allSettled(
     ADVISOR_EXECUTION_ORDER.map((advisorId) =>
       resolveAdvisorResult(decisionContext, advisorId),
+    ),
+  );
+
+  const advisorResults = ADVISOR_EXECUTION_ORDER.map((advisorId, index) =>
+    resolveSettledAdvisorResult(
+      settledResults[index],
+      advisorId,
+      decisionContext.executionId,
     ),
   );
 

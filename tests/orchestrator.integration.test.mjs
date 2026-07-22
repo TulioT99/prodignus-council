@@ -277,3 +277,38 @@ test("different decisions produce different advisor prompts across the council",
     assert.match(prompt, /push notifications/i);
   }
 });
+
+test("runCouncil preserves four successful advisors when one advisor provider fails", async () => {
+  globalThis.fetch = mock.fn(async (_url, options) => {
+    const body = JSON.parse(options.body);
+
+    if (body.model === "test/contrarian") {
+      return {
+        ok: false,
+        status: 500,
+        json: async () => ({
+          error: { message: "Internal server error" },
+        }),
+      };
+    }
+
+    if (body.model === "test/chairman") {
+      return createOpenRouterResponse(validChairmanPayload, body.model);
+    }
+
+    return createOpenRouterResponse(createAdvisorResponse(body.model), body.model);
+  });
+
+  const { runCouncil } = await import("../src/lib/council/orchestrator.ts");
+  const result = await runCouncil(sampleDecision);
+
+  assert.equal(result.advisors.length, 5);
+  assert.equal(result.advisors[0].persona.id, "ADV-001");
+  assert.equal(result.advisors[0].status, "failed");
+  assert.equal(
+    result.advisors.slice(1).every((advisor) => advisor.status === "success"),
+    true,
+  );
+  assert.equal(result.status, "partial");
+  assert.ok(result.chairman);
+});

@@ -77,14 +77,29 @@ test("ENG-0010: Contrarian prompt includes JSON field discipline", () => {
   }
 });
 
-test("ENG-0010: parser rejects keyArguments and unknowns instead of assumptions", () => {
+test("ENG-0010: parser maps keyArguments to assumptions when assumptions are omitted", () => {
+  const result = parseAdvisorResponseContent(
+    JSON.stringify({
+      summary: validPayload.summary,
+      analysis: validPayload.analysis,
+      keyArguments: ["Strongest case against proceeding as proposed."],
+      risks: validPayload.risks,
+      recommendation: validPayload.recommendation,
+      confidence: validPayload.confidence,
+    }),
+  );
+
+  assert.equal(result.assumptions.length, 1);
+  assert.match(result.assumptions[0], /Strongest case against proceeding/);
+});
+
+test("ENG-0010: parser rejects unknowns without assumptions or keyArguments", () => {
   assert.throws(
     () =>
       parseAdvisorResponseContent(
         JSON.stringify({
           summary: validPayload.summary,
           analysis: validPayload.analysis,
-          keyArguments: ["Strongest case against proceeding as proposed."],
           unknowns: ["Storage quota is unspecified."],
           risks: validPayload.risks,
           recommendation: validPayload.recommendation,
@@ -138,6 +153,22 @@ test("ENG-0010: parser rejects malformed JSON", () => {
     () => parseAdvisorResponseContent("{not-json"),
     /not valid JSON/,
   );
+});
+
+test("ENG-0010: parser accepts structured risk objects", () => {
+  const result = parseAdvisorResponseContent(
+    JSON.stringify({
+      ...validPayload,
+      risks: [
+        {
+          title: "Partner readiness",
+          description: "Palmas partner capacity may be overstated.",
+        },
+      ],
+    }),
+  );
+
+  assert.match(result.risks[0], /Partner readiness/);
 });
 
 test("ENG-0010: parser rejects empty analysis", () => {

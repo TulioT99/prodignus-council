@@ -64,8 +64,30 @@ function readStringArray(value: unknown, fieldName: string, maxItems: number): s
   }
 
   return value.map((item, index) =>
-    readNonEmptyString(item, `${fieldName}[${index}]`, LIST_ITEM_MAX_LENGTH),
+    readStringArrayItem(item, `${fieldName}[${index}]`, LIST_ITEM_MAX_LENGTH),
   );
+}
+
+function readStringArrayItem(
+  value: unknown,
+  fieldName: string,
+  maxLength: number,
+): string {
+  if (typeof value === "string") {
+    return readNonEmptyString(value, fieldName, maxLength);
+  }
+
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>;
+    const title = typeof record.title === "string" ? record.title.trim() : "";
+    const description =
+      typeof record.description === "string" ? record.description.trim() : "";
+    const combined = [title, description].filter(Boolean).join(": ");
+
+    return readNonEmptyString(combined, fieldName, maxLength);
+  }
+
+  throw new ModelOutputParseError(`${fieldName} must be a string.`);
 }
 
 function readAnalysis(value: unknown): AdvisorResponseContent["analysis"] {
@@ -114,11 +136,33 @@ function readConfidence(value: unknown): number {
     throw new ModelOutputParseError("confidence must be a finite number.");
   }
 
-  if (value < 0 || value > 100) {
+  const normalized = value > 0 && value <= 1 ? Math.round(value * 100) : value;
+
+  if (normalized < 0 || normalized > 100) {
     throw new ModelOutputParseError("confidence must be between 0 and 100.");
   }
 
-  return value;
+  return normalized;
+}
+
+function readAssumptions(record: Record<string, unknown>): string[] {
+  if (record.assumptions !== undefined) {
+    return readStringArray(record.assumptions, "assumptions", MAX_ASSUMPTIONS);
+  }
+
+  if (record.keyArguments !== undefined) {
+    return readStringArray(record.keyArguments, "assumptions", MAX_ASSUMPTIONS);
+  }
+
+  throw new ModelOutputParseError("assumptions must be an array.");
+}
+
+function readRisks(record: Record<string, unknown>): string[] {
+  if (record.risks === undefined) {
+    throw new ModelOutputParseError("risks must be an array.");
+  }
+
+  return readStringArray(record.risks, "risks", MAX_RISKS);
 }
 
 export function parseAdvisorResponseContent(text: string): AdvisorResponseContent {
@@ -137,8 +181,8 @@ export function parseAdvisorResponseContent(text: string): AdvisorResponseConten
   return {
     summary: readNonEmptyString(record.summary, "summary", SUMMARY_MAX_LENGTH),
     analysis: readAnalysis(record.analysis),
-    assumptions: readStringArray(record.assumptions, "assumptions", MAX_ASSUMPTIONS),
-    risks: readStringArray(record.risks, "risks", MAX_RISKS),
+    assumptions: readAssumptions(record),
+    risks: readRisks(record),
     recommendation: readRecommendation(record.recommendation),
     confidence: readConfidence(record.confidence),
   };
