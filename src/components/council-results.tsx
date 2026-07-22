@@ -88,6 +88,18 @@ export function CouncilResults({ result }: CouncilResultsProps) {
             </div>
           ) : null}
           <div>
+            <dt className="text-neutral-500">Advisor Stage</dt>
+            <dd className="mt-1 font-medium text-neutral-900">
+              {formatDuration(result.advisorStageDurationMs)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-neutral-500">Chairman Stage</dt>
+            <dd className="mt-1 font-medium text-neutral-900">
+              {formatDuration(result.chairmanDurationMs)}
+            </dd>
+          </div>
+          <div>
             <dt className="text-neutral-500">Total Duration</dt>
             <dd className="mt-1 font-medium text-neutral-900">
               {formatDuration(result.totalDurationMs)}

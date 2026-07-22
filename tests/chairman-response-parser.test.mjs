@@ -2,63 +2,113 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { parseChairmanResponseContent } from "../src/lib/council/chairman-response-parser.ts";
-
-const validPayload = {
-  executiveSummary: "The council supports a bounded pilot with safeguards.",
-  finalRecommendation:
-    "Proceed with a tightly scoped test-first pilot embedded within guided journeys.",
-  decision: "test_first",
-  consensus: ["Guided journeys remain the primary interaction model."],
-  disagreements: ["Whether any open-ended AI entry point should exist."],
-  keyArguments: [
-    "Vulnerable citizens need verifiable, bounded assistance rather than open chat.",
-  ],
-  risks: ["Pilot results may not generalize across municipalities."],
-  conditions: ["Human escalation must be mandatory for eligibility decisions."],
-  nextSteps: ["Run a 12-week pilot in two high-volume journeys."],
-  confidence: 78,
-};
+import { validChairmanPayload } from "./chairman-fixtures.mjs";
 
 test("parseChairmanResponseContent parses valid JSON", () => {
-  const result = parseChairmanResponseContent(JSON.stringify(validPayload));
+  const result = parseChairmanResponseContent(JSON.stringify(validChairmanPayload));
 
+  assert.equal(result.recommendationType, "run_bounded_experiment");
   assert.equal(result.decision, "test_first");
-  assert.equal(result.executiveSummary, validPayload.executiveSummary);
-  assert.equal(result.finalRecommendation, validPayload.finalRecommendation);
-  assert.deepEqual(result.consensus, validPayload.consensus);
-  assert.deepEqual(result.disagreements, validPayload.disagreements);
-  assert.deepEqual(result.keyArguments, validPayload.keyArguments);
-  assert.deepEqual(result.risks, validPayload.risks);
-  assert.deepEqual(result.conditions, validPayload.conditions);
-  assert.deepEqual(result.nextSteps, validPayload.nextSteps);
+  assert.equal(result.executiveSummary, validChairmanPayload.executiveSummary);
+  assert.equal(result.decisionStatement, validChairmanPayload.decisionStatement);
+  assert.equal(result.nextActions.length, 1);
+  assert.equal(result.reversalCriteria.length, 1);
+  assert.equal(result.disagreements[0].topic, validChairmanPayload.disagreements[0].topic);
+  assert.equal(result.minorityView?.advisorId, "ADV-001");
+  assert.equal(result.confidence, 78);
+});
+
+test("parseChairmanResponseContent normalizes confidence from 0-1", () => {
+  const result = parseChairmanResponseContent(
+    JSON.stringify({ ...validChairmanPayload, confidence: 0.78 }),
+  );
+
   assert.equal(result.confidence, 78);
 });
 
 test("parseChairmanResponseContent strips markdown fences", () => {
-  const fenced = "```json\n" + JSON.stringify(validPayload) + "\n```";
+  const fenced = "```json\n" + JSON.stringify(validChairmanPayload) + "\n```";
   const result = parseChairmanResponseContent(fenced);
 
-  assert.equal(result.decision, "test_first");
+  assert.equal(result.recommendationType, "run_bounded_experiment");
 });
 
-test("parseChairmanResponseContent rejects invalid decision enum", () => {
+test("parseChairmanResponseContent accepts legacy decision and nextSteps fields", () => {
+  const legacyPayload = {
+    executiveSummary: validChairmanPayload.executiveSummary,
+    finalRecommendation: validChairmanPayload.finalRecommendation,
+    decision: "test_first",
+    consensus: validChairmanPayload.consensus,
+    disagreements: ["Scope of the initial pilot."],
+    keyArguments: validChairmanPayload.keyArguments,
+    risks: validChairmanPayload.risks,
+    conditions: validChairmanPayload.conditions,
+    nextSteps: ["Define pilot metrics."],
+    reversalCriteria: validChairmanPayload.reversalCriteria,
+    confidence: 72,
+  };
+
+  const result = parseChairmanResponseContent(JSON.stringify(legacyPayload));
+
+  assert.equal(result.recommendationType, "run_bounded_experiment");
+  assert.equal(result.nextActions.length, 1);
+});
+
+test("parseChairmanResponseContent rejects invalid recommendation type", () => {
   assert.throws(
     () =>
       parseChairmanResponseContent(
-        JSON.stringify({ ...validPayload, decision: "maybe_proceed" }),
+        JSON.stringify({ ...validChairmanPayload, recommendationType: "maybe_proceed" }),
       ),
-    /decision must be a valid council decision/,
+    /recommendationType must be a valid chairman recommendation type/,
   );
 });
 
-test("parseChairmanResponseContent rejects confidence outside 0-100", () => {
+test("parseChairmanResponseContent rejects missing next actions", () => {
+  const payload = { ...validChairmanPayload };
+  delete payload.nextActions;
+
+  assert.throws(
+    () => parseChairmanResponseContent(JSON.stringify({ ...payload, nextActions: [] })),
+    /nextActions must contain at least one action/,
+  );
+});
+
+test("parseChairmanResponseContent rejects missing reversal criteria", () => {
   assert.throws(
     () =>
-      parseChairmanResponseContent(JSON.stringify({ ...validPayload, confidence: 150 })),
-    /confidence must be between 0 and 100/,
+      parseChairmanResponseContent(
+        JSON.stringify({ ...validChairmanPayload, reversalCriteria: [] }),
+      ),
+    /reversalCriteria must contain at least one item/,
   );
 });
 
 test("parseChairmanResponseContent rejects malformed JSON", () => {
   assert.throws(() => parseChairmanResponseContent("{not-json"), /not valid JSON/);
+});
+
+test("parseChairmanResponseContent renumbers duplicate next action sequences", () => {
+  const result = parseChairmanResponseContent(
+    JSON.stringify({
+      ...validChairmanPayload,
+      nextActions: [
+        {
+          action: "Second action",
+          sequence: 2,
+          expectedOutcome: "Outcome B",
+        },
+        {
+          action: "First action",
+          sequence: 2,
+          expectedOutcome: "Outcome A",
+        },
+      ],
+    }),
+  );
+
+  assert.deepEqual(
+    result.nextActions.map((action) => action.sequence),
+    [1, 2],
+  );
 });

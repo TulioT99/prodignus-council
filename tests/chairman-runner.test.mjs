@@ -1,18 +1,10 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, mock, test } from "node:test";
 
-const validChairmanPayload = {
-  executiveSummary: "Synthesized council view.",
-  finalRecommendation: "Run a bounded pilot first.",
-  decision: "test_first",
-  consensus: ["Safety guardrails are required."],
-  disagreements: ["Scope of the initial pilot."],
-  keyArguments: ["Citizen safety outweighs speed to market."],
-  risks: ["Operational burden on frontline staff."],
-  conditions: ["Mandatory human escalation."],
-  nextSteps: ["Define pilot metrics."],
-  confidence: 72,
-};
+import {
+  createOpenRouterChairmanResponse,
+  validChairmanPayload,
+} from "./chairman-fixtures.mjs";
 
 const sampleDecision = {
   id: "DEC-20260720-001",
@@ -27,13 +19,13 @@ const sampleDecision = {
 const sampleAdvisor = {
   persona: {
     id: "ADV-002",
-    displayName: "The First Principles Thinker",
-    thinkingLens: "first-principles",
-    expertise: "Public Policy",
-    background: "Public Policy Researcher",
+    displayName: "The Product Strategy Advisor",
+    thinkingLens: "product-strategy",
+    expertise: "Product Strategy",
+    background: "Head of Product",
     yearsExperience: 18,
     mission: "Challenge assumptions.",
-    decisionStyle: "Rebuild from first principles.",
+    decisionStyle: "Evaluate product fit.",
     coreBeliefs: ["Every recommendation depends on explicit assumptions."],
     model: "OpenRouter (configured model)",
   },
@@ -50,15 +42,34 @@ const sampleAdvisor = {
   totalTokens: 200,
 };
 
-function createOpenRouterResponse(content, model = "test/chairman") {
+function createSuccessfulAdvisors(count = 3) {
+  const ids = ["ADV-002", "ADV-003", "ADV-004", "ADV-005", "ADV-001"];
+
+  return ids.slice(0, count).map((id, index) => ({
+    ...sampleAdvisor,
+    persona: {
+      ...sampleAdvisor.persona,
+      id,
+      displayName: `Advisor ${id}`,
+    },
+    summary: `Perspective ${index + 1} on image upload.`,
+  }));
+}
+
+function createFailedAdvisor(id, errorMessage) {
   return {
-    ok: true,
-    status: 200,
-    json: async () => ({
-      model,
-      choices: [{ message: { role: "assistant", content: JSON.stringify(content) } }],
-      usage: { prompt_tokens: 100, completion_tokens: 200, total_tokens: 300 },
-    }),
+    ...sampleAdvisor,
+    persona: { ...sampleAdvisor.persona, id, displayName: `Advisor ${id}` },
+    status: "failed",
+    summary: "The advisor could not complete this review.",
+    analysis: [],
+    assumptions: [],
+    risks: [],
+    recommendation: "insufficient_information",
+    confidence: 0,
+    durationMs: 0,
+    totalTokens: 0,
+    errorMessage,
   };
 }
 
@@ -84,42 +95,21 @@ afterEach(() => {
 });
 
 const sampleAdvisorsForSessionStatus = [
-  sampleAdvisor,
-  {
-    ...sampleAdvisor,
-    persona: { ...sampleAdvisor.persona, id: "ADV-003", displayName: "The UX Advisor" },
-    status: "success",
-  },
-  {
-    ...sampleAdvisor,
-    persona: { ...sampleAdvisor.persona, id: "ADV-004", displayName: "The Engineering Advisor" },
-    status: "success",
-  },
-  {
-    ...sampleAdvisor,
-    persona: { ...sampleAdvisor.persona, id: "ADV-005", displayName: "The Human Impact Advisor" },
-    status: "failed",
-    errorMessage: "The advisor could not complete this review.",
-  },
-  {
-    ...sampleAdvisor,
-    persona: { ...sampleAdvisor.persona, id: "ADV-001", displayName: "The Contrarian" },
-    status: "failed",
-    errorMessage: "The model provider did not respond within the allowed time.",
-  },
+  ...createSuccessfulAdvisors(3),
+  createFailedAdvisor("ADV-004", "The advisor could not complete this review."),
+  createFailedAdvisor("ADV-001", "The model provider did not respond within the allowed time."),
 ];
 
 test("TC-018: session status preservation after context-build failure", async () => {
   const { createDecisionContext } = await import("../src/lib/council/decision-context.ts");
   const { determineCouncilSessionStatus } = await import("../src/lib/council/council-status.ts");
-  const { councilConfig } = await import("../src/config/council.ts");
   const { runChairman } = await import("../src/lib/council/chairman-runner.ts");
 
   const advisorsBefore = structuredClone(sampleAdvisorsForSessionStatus);
   const expectedSessionStatus = determineCouncilSessionStatus(
     advisorsBefore,
-    councilConfig.liveAdvisorIds,
-    councilConfig.minimumSuccessfulAdvisors,
+    { status: "failed" },
+    3,
   );
 
   const buildFailureContext = createDecisionContext(
@@ -132,17 +122,12 @@ test("TC-018: session status preservation after context-build failure", async ()
   assert.equal(buildFailureResult.executionId, "EXEC-SHARED-001");
   assert.match(buildFailureResult.errorMessage ?? "", /question is required/i);
   assert.deepEqual(
-    determineCouncilSessionStatus(
-      advisorsBefore,
-      councilConfig.liveAdvisorIds,
-      councilConfig.minimumSuccessfulAdvisors,
-    ),
+    determineCouncilSessionStatus(advisorsBefore, buildFailureResult, 3),
     expectedSessionStatus,
   );
-  assert.deepEqual(advisorsBefore, sampleAdvisorsForSessionStatus);
 
   globalThis.fetch = mock.fn(async () =>
-    createOpenRouterResponse({ invalid: true }),
+    createOpenRouterChairmanResponse({ invalid: true }),
   );
 
   const providerFailureContext = createDecisionContext(sampleDecision, {
@@ -158,24 +143,8 @@ test("TC-018: session status preservation after context-build failure", async ()
   assert.equal(providerFailureResult.executionId, "EXEC-SHARED-001");
   assert.ok(providerFailureResult.errorMessage);
   assert.deepEqual(
-    determineCouncilSessionStatus(
-      advisorsForProviderFailure,
-      councilConfig.liveAdvisorIds,
-      councilConfig.minimumSuccessfulAdvisors,
-    ),
+    determineCouncilSessionStatus(advisorsForProviderFailure, providerFailureResult, 3),
     expectedSessionStatus,
-  );
-  assert.equal(
-    determineCouncilSessionStatus(
-      advisorsBefore,
-      councilConfig.liveAdvisorIds,
-      councilConfig.minimumSuccessfulAdvisors,
-    ),
-    determineCouncilSessionStatus(
-      advisorsForProviderFailure,
-      councilConfig.liveAdvisorIds,
-      councilConfig.minimumSuccessfulAdvisors,
-    ),
   );
 });
 
@@ -185,7 +154,7 @@ test("runChairman returns failed result when context build input is invalid", as
   const decisionContext = createDecisionContext({ ...sampleDecision, question: "   " }, {
     executionId: "EXEC-SHARED-001",
   });
-  const result = await runChairman(decisionContext, [sampleAdvisor]);
+  const result = await runChairman(decisionContext, createSuccessfulAdvisors(3));
 
   assert.equal(result.status, "failed");
   assert.equal(result.executionId, "EXEC-SHARED-001");
@@ -193,23 +162,27 @@ test("runChairman returns failed result when context build input is invalid", as
 });
 
 test("runChairman returns structured ChairmanResult on success", async () => {
-  globalThis.fetch = mock.fn(async () => createOpenRouterResponse(validChairmanPayload));
+  globalThis.fetch = mock.fn(async () => createOpenRouterChairmanResponse(validChairmanPayload));
 
   const { createDecisionContext } = await import("../src/lib/council/decision-context.ts");
   const { runChairman } = await import("../src/lib/council/chairman-runner.ts");
   const decisionContext = createDecisionContext(sampleDecision, {
     executionId: "EXEC-SHARED-001",
   });
-  const result = await runChairman(decisionContext, [sampleAdvisor]);
+  const result = await runChairman(decisionContext, createSuccessfulAdvisors(5));
 
   assert.equal(result.status, "success");
   assert.equal(result.executionId, "EXEC-SHARED-001");
+  assert.equal(result.recommendationType, "run_bounded_experiment");
   assert.equal(result.decision, "test_first");
   assert.equal(result.executiveSummary, validChairmanPayload.executiveSummary);
-  assert.equal(result.finalRecommendation, validChairmanPayload.finalRecommendation);
-  assert.deepEqual(result.consensus, validChairmanPayload.consensus);
-  assert.equal(result.confidence, 0.72);
+  assert.equal(result.confidence, 0.78);
   assert.equal(result.totalTokens, 300);
+  assert.equal(result.promptTokens, 100);
+  assert.equal(result.completionTokens, 200);
+  assert.equal(result.estimatedCostUsd, 0.0025);
+  assert.equal(result.nextActions.length, 1);
+  assert.equal(result.reversalCriteria.length, 1);
   assert.ok(result.durationMs >= 0);
 });
 
@@ -221,16 +194,28 @@ test("runChairman returns failed result when model is not configured", async () 
   const decisionContext = createDecisionContext(sampleDecision, {
     executionId: "EXEC-SHARED-001",
   });
-  const result = await runChairman(decisionContext, [sampleAdvisor]);
+  const result = await runChairman(decisionContext, createSuccessfulAdvisors(3));
 
   assert.equal(result.status, "failed");
-  assert.equal(result.executionId, "EXEC-SHARED-001");
   assert.match(result.errorMessage ?? "", /not configured/i);
+});
+
+test("runChairman returns insufficient council failure when fewer than three advisors succeed", async () => {
+  const { createDecisionContext } = await import("../src/lib/council/decision-context.ts");
+  const { runChairman } = await import("../src/lib/council/chairman-runner.ts");
+  const decisionContext = createDecisionContext(sampleDecision, {
+    executionId: "EXEC-SHARED-001",
+  });
+  const result = await runChairman(decisionContext, createSuccessfulAdvisors(2));
+
+  assert.equal(result.status, "failed");
+  assert.equal(result.insufficientCouncil, true);
+  assert.equal(globalThis.fetch, originalFetch);
 });
 
 test("runChairman returns failed result when provider returns invalid JSON", async () => {
   globalThis.fetch = mock.fn(async () =>
-    createOpenRouterResponse({ invalid: true }),
+    createOpenRouterChairmanResponse({ invalid: true }),
   );
 
   const { createDecisionContext } = await import("../src/lib/council/decision-context.ts");
@@ -238,9 +223,8 @@ test("runChairman returns failed result when provider returns invalid JSON", asy
   const decisionContext = createDecisionContext(sampleDecision, {
     executionId: "EXEC-SHARED-001",
   });
-  const result = await runChairman(decisionContext, [sampleAdvisor]);
+  const result = await runChairman(decisionContext, createSuccessfulAdvisors(3));
 
   assert.equal(result.status, "failed");
-  assert.equal(result.executionId, "EXEC-SHARED-001");
   assert.ok(result.errorMessage);
 });

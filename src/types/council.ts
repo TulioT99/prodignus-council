@@ -218,16 +218,62 @@ export type CouncilApiResponse = CouncilApiSuccess | CouncilApiFailure;
 
 export type ChairmanStatus = "success" | "failed";
 
+export type ChairmanRecommendationType =
+  | "proceed"
+  | "proceed_with_conditions"
+  | "defer"
+  | "do_not_proceed"
+  | "run_bounded_experiment";
+
+export type ChairmanDisagreement = {
+  topic: string;
+  positions: string[];
+  resolution: string;
+};
+
+export type ChairmanTradeoff = {
+  tradeoff: string;
+  preferredSide: string;
+  reason: string;
+};
+
+export type ChairmanMinorityView = {
+  advisorId?: string;
+  position: string;
+  whyItMatters: string;
+};
+
+export type ChairmanEvidenceRequirement = {
+  evidence: string;
+  whyNeeded: string;
+  owner?: string;
+};
+
+export type ChairmanNextAction = {
+  action: string;
+  owner?: string;
+  sequence: number;
+  expectedOutcome: string;
+};
+
 export type ChairmanResponseContent = {
   executiveSummary: string;
   finalRecommendation: string;
+  decisionStatement: string;
   decision: CouncilDecision;
+  recommendationType: ChairmanRecommendationType;
   consensus: string[];
-  disagreements: string[];
-  keyArguments: string[];
-  risks: string[];
+  disagreements: ChairmanDisagreement[];
+  decisiveTradeoffs: ChairmanTradeoff[];
+  assumptions: string[];
   conditions: string[];
-  nextSteps: string[];
+  risks: string[];
+  unknowns: string[];
+  minorityView?: ChairmanMinorityView;
+  minimumAdditionalEvidence: ChairmanEvidenceRequirement[];
+  nextActions: ChairmanNextAction[];
+  reversalCriteria: string[];
+  keyArguments: string[];
   confidence: number;
 };
 
@@ -235,17 +281,35 @@ export type ChairmanResult = {
   status: ChairmanStatus;
   executionId: string;
   decision: CouncilDecision;
+  decisionStatement: string;
   executiveSummary: string;
   finalRecommendation: string;
+  rationale: string;
+  recommendationType: ChairmanRecommendationType;
   consensus: string[];
   disagreements: string[];
-  keyArguments: string[];
-  risks: string[];
+  structuredDisagreements: ChairmanDisagreement[];
+  decisiveTradeoffs: ChairmanTradeoff[];
+  assumptions: string[];
   conditions: string[];
+  risks: string[];
+  unknowns: string[];
+  minorityView?: ChairmanMinorityView;
+  minimumAdditionalEvidence: ChairmanEvidenceRequirement[];
+  nextActions: ChairmanNextAction[];
+  reversalCriteria: string[];
+  keyArguments: string[];
   nextSteps: string[];
   confidence: number;
+  model: string;
   durationMs: number;
   totalTokens: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  estimatedCostUsd?: number;
+  insufficientCouncil?: boolean;
+  missingPerspectives?: string[];
+  reducedConfidenceSynthesis?: boolean;
   errorMessage?: string;
 };
 
@@ -256,6 +320,8 @@ export type CouncilResult = {
   status: CouncilSessionStatus;
   advisors: AdvisorResult[];
   chairman?: ChairmanResult;
+  advisorStageDurationMs: number;
+  chairmanDurationMs: number;
   totalDurationMs: number;
 };
 

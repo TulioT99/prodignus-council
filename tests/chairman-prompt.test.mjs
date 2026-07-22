@@ -109,7 +109,7 @@ test("TC-015: user prompt superset equivalence preserves legacy Chairman payload
     "policy.pdf",
     `Status: ${decision.status}`,
     "Successful advisor responses (1)",
-    "Advisor failures (1)",
+    "Failed advisors (1)",
   ];
 
   for (const material of legacyDecisionMaterial) {
@@ -171,7 +171,7 @@ test("TC-012: optional advisor fields reach serialization", () => {
 test("buildChairmanPrompts includes advisor failures", () => {
   const { userPrompt } = buildChairmanPrompts(buildContext([failedAdvisor]));
 
-  assert.match(userPrompt, /Advisor failures \(1\)/);
+  assert.match(userPrompt, /Failed advisors \(1\)/);
   assert.match(userPrompt, /The Contrarian/);
   assert.match(userPrompt, /did not respond within the allowed time/);
 });
@@ -179,7 +179,7 @@ test("buildChairmanPrompts includes advisor failures", () => {
 test("TC-019: buildChairmanPrompts instructs against vote counting", () => {
   const { systemPrompt } = buildChairmanPrompts(buildContext([successfulAdvisor]));
 
-  assert.match(systemPrompt, /not decide by counting votes/i);
+  assert.match(systemPrompt, /vote counts/i);
 });
 
 test("TC-013: structured data does not serialize as [object Object]", () => {

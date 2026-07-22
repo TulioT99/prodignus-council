@@ -55,17 +55,20 @@ function resolveSettledAdvisorResult(
 }
 
 export async function runCouncil(decision: Decision): Promise<CouncilResult> {
+  const councilStartedAt = Date.now();
   const decisionContext = createDecisionContext(decision);
   const integrity = recordDecisionContextIntegrity(
     decisionContext,
     ADVISOR_EXECUTION_ORDER,
   );
 
+  const advisorStageStartedAt = Date.now();
   const settledResults = await Promise.allSettled(
     ADVISOR_EXECUTION_ORDER.map((advisorId) =>
       resolveAdvisorResult(decisionContext, advisorId),
     ),
   );
+  const advisorStageDurationMs = Date.now() - advisorStageStartedAt;
 
   const advisorResults = ADVISOR_EXECUTION_ORDER.map((advisorId, index) =>
     resolveSettledAdvisorResult(
@@ -75,13 +78,12 @@ export async function runCouncil(decision: Decision): Promise<CouncilResult> {
     ),
   );
 
+  const chairmanStartedAt = Date.now();
   const chairman = councilConfig.chairmanEnabled
     ? await runChairman(decisionContext, advisorResults)
     : undefined;
-
-  const totalDurationMs =
-    advisorResults.reduce((total, advisor) => total + advisor.durationMs, 0) +
-    (chairman?.durationMs ?? 0);
+  const chairmanDurationMs = chairman ? Date.now() - chairmanStartedAt : 0;
+  const totalDurationMs = Date.now() - councilStartedAt;
 
   return {
     decision,
@@ -89,11 +91,13 @@ export async function runCouncil(decision: Decision): Promise<CouncilResult> {
     integrity,
     status: determineCouncilSessionStatus(
       advisorResults,
-      councilConfig.liveAdvisorIds,
+      chairman,
       councilConfig.minimumSuccessfulAdvisors,
     ),
     advisors: advisorResults,
     chairman,
+    advisorStageDurationMs,
+    chairmanDurationMs,
     totalDurationMs,
   };
 }

@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, mock, test } from "node:test";
 
+import {
+  createOpenRouterChairmanResponse,
+  validChairmanPayload,
+} from "./chairman-fixtures.mjs";
+
 const validAdvisorPayload = {
   summary: "Image upload should proceed with strict privacy controls.",
   analysis: [
@@ -105,18 +110,7 @@ function createAdvisorResponse(model) {
   return validAdvisorPayload;
 }
 
-const validChairmanPayload = {
-  executiveSummary: "The council supports scoped image upload with safeguards.",
-  finalRecommendation: "Proceed with image upload only for required document evidence.",
-  decision: "proceed_with_conditions",
-  consensus: ["Uploads must remain scoped and privacy-preserving."],
-  disagreements: ["Timing of rollout."],
-  keyArguments: ["Document evidence can improve journey completion."],
-  risks: ["Privacy exposure if uploads are not scoped."],
-  conditions: ["Encrypt stored uploads and limit retention."],
-  nextSteps: ["Pilot upload in one journey."],
-  confidence: 75,
-};
+const validChairmanPayloadForIntegration = validChairmanPayload;
 
 const sampleDecision = {
   id: "DEC-20260720-001",
@@ -184,7 +178,7 @@ test("runCouncil shares one Decision Context across all advisors and Chairman", 
     const model = promptBodies.at(-1).model;
 
     if (model === "test/chairman") {
-      return createOpenRouterResponse(validChairmanPayload, model);
+      return createOpenRouterChairmanResponse(validChairmanPayloadForIntegration, model);
     }
 
     return createOpenRouterResponse(createAdvisorResponse(model), model);
@@ -251,7 +245,7 @@ test("different decisions produce different advisor prompts across the council",
     capturedQuestions.push(userMessage);
 
     if (body.model === "test/chairman") {
-      return createOpenRouterResponse(validChairmanPayload, body.model);
+      return createOpenRouterChairmanResponse(validChairmanPayloadForIntegration, body.model);
     }
 
     return createOpenRouterResponse(createAdvisorResponse(body.model), body.model);
@@ -293,7 +287,7 @@ test("runCouncil preserves four successful advisors when one advisor provider fa
     }
 
     if (body.model === "test/chairman") {
-      return createOpenRouterResponse(validChairmanPayload, body.model);
+      return createOpenRouterChairmanResponse(validChairmanPayloadForIntegration, body.model);
     }
 
     return createOpenRouterResponse(createAdvisorResponse(body.model), body.model);
@@ -309,6 +303,28 @@ test("runCouncil preserves four successful advisors when one advisor provider fa
     result.advisors.slice(1).every((advisor) => advisor.status === "success"),
     true,
   );
-  assert.equal(result.status, "partial");
+  assert.equal(result.status, "complete");
   assert.ok(result.chairman);
+  assert.ok(result.advisorStageDurationMs >= 0);
+  assert.ok(result.chairmanDurationMs >= 0);
+  assert.ok(result.totalDurationMs >= result.advisorStageDurationMs);
+});
+
+test("runCouncil records advisor-stage and Chairman durations separately", async () => {
+  globalThis.fetch = mock.fn(async (_url, options) => {
+    const body = JSON.parse(options.body);
+
+    if (body.model === "test/chairman") {
+      return createOpenRouterChairmanResponse(validChairmanPayloadForIntegration, body.model);
+    }
+
+    return createOpenRouterResponse(createAdvisorResponse(body.model), body.model);
+  });
+
+  const { runCouncil } = await import("../src/lib/council/orchestrator.ts");
+  const result = await runCouncil(sampleDecision);
+
+  assert.ok(result.advisorStageDurationMs >= 0);
+  assert.ok(result.chairmanDurationMs >= 0);
+  assert.ok(result.totalDurationMs >= result.advisorStageDurationMs + result.chairmanDurationMs);
 });
