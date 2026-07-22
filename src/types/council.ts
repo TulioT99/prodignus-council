@@ -84,6 +84,8 @@ export type CouncilRequest = {
   question: string;
   context: string;
   constraints: string;
+  expectedOutcome?: string;
+  alternatives?: string;
 };
 
 export type AdvisorAnalysisItem = {

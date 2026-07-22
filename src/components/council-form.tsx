@@ -1,61 +1,35 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { exampleDecisionRequest } from "@/data/example-decision";
+import { demoDecisionRequest } from "@/data/example-decision";
+import {
+  EMPTY_COUNCIL_REQUEST,
+  QUESTION_MAX_LENGTH,
+  TITLE_MAX_LENGTH,
+  normalizeCouncilRequest,
+  validateCouncilForm,
+} from "@/lib/council/council-form-validation";
 import type { CouncilFormErrors, CouncilRequest } from "@/types/council";
 
-const TITLE_MIN_LENGTH = 3;
-const TITLE_MAX_LENGTH = 150;
-const QUESTION_MIN_LENGTH = 10;
-const QUESTION_MAX_LENGTH = 4000;
-
-const EMPTY_FORM: CouncilRequest = {
-  title: "",
-  question: "",
-  context: "",
-  constraints: "",
-};
-
-function validateForm(values: CouncilRequest): CouncilFormErrors {
-  const errors: CouncilFormErrors = {};
-  const trimmedTitle = values.title.trim();
-  const trimmedQuestion = values.question.trim();
-
-  if (!trimmedTitle) {
-    errors.title = "Decision title is required.";
-  } else if (trimmedTitle.length < TITLE_MIN_LENGTH) {
-    errors.title = `Decision title must be at least ${TITLE_MIN_LENGTH} characters.`;
-  } else if (trimmedTitle.length > TITLE_MAX_LENGTH) {
-    errors.title = `Decision title must be at most ${TITLE_MAX_LENGTH} characters.`;
-  }
-
-  if (!trimmedQuestion) {
-    errors.question = "Question is required.";
-  } else if (trimmedQuestion.length < QUESTION_MIN_LENGTH) {
-    errors.question = `Question must be at least ${QUESTION_MIN_LENGTH} characters.`;
-  } else if (trimmedQuestion.length > QUESTION_MAX_LENGTH) {
-    errors.question = `Question must be at most ${QUESTION_MAX_LENGTH} characters.`;
-  }
-
-  return errors;
-}
-
 interface CouncilFormProps {
-  initialValues?: CouncilRequest;
+  values: CouncilRequest;
+  onChange: (values: CouncilRequest) => void;
   isSubmitting: boolean;
   onSubmit: (values: CouncilRequest) => void;
+  onClear?: () => void;
 }
 
 export function CouncilForm({
-  initialValues = EMPTY_FORM,
+  values,
+  onChange,
   isSubmitting,
   onSubmit,
+  onClear,
 }: CouncilFormProps) {
-  const [values, setValues] = useState<CouncilRequest>(initialValues);
   const [errors, setErrors] = useState<CouncilFormErrors>({});
 
   function handleChange(field: keyof CouncilRequest, value: string) {
-    setValues((current) => ({ ...current, [field]: value }));
+    onChange({ ...values, [field]: value });
 
     if (field === "title" && errors.title) {
       setErrors((current) => ({ ...current, title: undefined }));
@@ -66,27 +40,28 @@ export function CouncilForm({
     }
   }
 
-  function handleLoadExample() {
-    setValues(exampleDecisionRequest);
+  function handleLoadDemo() {
+    onChange(demoDecisionRequest);
     setErrors({});
+  }
+
+  function handleClear() {
+    onChange(EMPTY_COUNCIL_REQUEST);
+    setErrors({});
+    onClear?.();
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const nextErrors = validateForm(values);
+    const nextErrors = validateCouncilForm(values);
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
     }
 
-    onSubmit({
-      title: values.title.trim(),
-      question: values.question.trim(),
-      context: values.context.trim(),
-      constraints: values.constraints.trim(),
-    });
+    onSubmit(normalizeCouncilRequest(values));
   }
 
   return (
@@ -98,8 +73,11 @@ export function CouncilForm({
       <div className="space-y-5">
         <div>
           <label htmlFor="decision-title" className="block text-sm font-medium text-neutral-900">
-            Decision Title
+            Decision title <span className="text-red-700">*</span>
           </label>
+          <p className="mt-1 text-sm text-neutral-600">
+            A short name that identifies the decision under review.
+          </p>
           <input
             id="decision-title"
             name="title"
@@ -107,11 +85,14 @@ export function CouncilForm({
             value={values.title}
             onChange={(event) => handleChange("title", event.target.value)}
             aria-invalid={Boolean(errors.title)}
-            aria-describedby={errors.title ? "decision-title-error" : undefined}
+            aria-describedby={errors.title ? "decision-title-error" : "decision-title-help"}
             className="mt-2 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500"
             maxLength={TITLE_MAX_LENGTH}
             disabled={isSubmitting}
           />
+          <p id="decision-title-help" className="sr-only">
+            Required field.
+          </p>
           {errors.title ? (
             <p id="decision-title-error" className="mt-2 text-sm text-red-700">
               {errors.title}
@@ -121,20 +102,26 @@ export function CouncilForm({
 
         <div>
           <label htmlFor="question" className="block text-sm font-medium text-neutral-900">
-            Question
+            Decision question <span className="text-red-700">*</span>
           </label>
+          <p className="mt-1 text-sm text-neutral-600">
+            State the question the Council should answer.
+          </p>
           <textarea
             id="question"
             name="question"
             value={values.question}
             onChange={(event) => handleChange("question", event.target.value)}
             aria-invalid={Boolean(errors.question)}
-            aria-describedby={errors.question ? "question-error" : undefined}
+            aria-describedby={errors.question ? "question-error" : "question-help"}
             rows={4}
             maxLength={QUESTION_MAX_LENGTH}
             disabled={isSubmitting}
             className="mt-2 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500"
           />
+          <p id="question-help" className="sr-only">
+            Required field.
+          </p>
           {errors.question ? (
             <p id="question-error" className="mt-2 text-sm text-red-700">
               {errors.question}
@@ -144,14 +131,38 @@ export function CouncilForm({
 
         <div>
           <label htmlFor="context" className="block text-sm font-medium text-neutral-900">
-            Context
+            Context and known facts
           </label>
+          <p className="mt-1 text-sm text-neutral-600">
+            Background, supporting information, and facts the Council should consider.
+          </p>
           <textarea
             id="context"
             name="context"
             value={values.context}
             onChange={(event) => handleChange("context", event.target.value)}
-            rows={4}
+            rows={5}
+            disabled={isSubmitting}
+            className="mt-2 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="expected-outcome"
+            className="block text-sm font-medium text-neutral-900"
+          >
+            Objectives
+          </label>
+          <p className="mt-1 text-sm text-neutral-600">
+            What outcome or success criteria should guide the recommendation?
+          </p>
+          <textarea
+            id="expected-outcome"
+            name="expectedOutcome"
+            value={values.expectedOutcome ?? ""}
+            onChange={(event) => handleChange("expectedOutcome", event.target.value)}
+            rows={3}
             disabled={isSubmitting}
             className="mt-2 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500"
           />
@@ -164,6 +175,9 @@ export function CouncilForm({
           >
             Constraints
           </label>
+          <p className="mt-1 text-sm text-neutral-600">
+            Limits, deadlines, budget, policy, or non-negotiable requirements.
+          </p>
           <textarea
             id="constraints"
             name="constraints"
@@ -174,23 +188,53 @@ export function CouncilForm({
             className="mt-2 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500"
           />
         </div>
+
+        <div>
+          <label
+            htmlFor="alternatives"
+            className="block text-sm font-medium text-neutral-900"
+          >
+            Alternatives
+          </label>
+          <p className="mt-1 text-sm text-neutral-600">
+            Options or paths the Council should compare, if applicable.
+          </p>
+          <textarea
+            id="alternatives"
+            name="alternatives"
+            value={values.alternatives ?? ""}
+            onChange={(event) => handleChange("alternatives", event.target.value)}
+            rows={3}
+            disabled={isSubmitting}
+            className="mt-2 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500"
+          />
+        </div>
       </div>
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <button
           type="submit"
           disabled={isSubmitting}
+          aria-busy={isSubmitting}
           className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-neutral-400"
         >
-          Convene Council
+          {isSubmitting ? "Council deliberating..." : "Convene Council"}
         </button>
         <button
           type="button"
-          onClick={handleLoadExample}
+          onClick={handleLoadDemo}
           disabled={isSubmitting}
           className="rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-900 disabled:cursor-not-allowed disabled:text-neutral-400"
         >
-          Load Example
+          Load demo decision
+        </button>
+        <button
+          type="button"
+          onClick={handleClear}
+          disabled={isSubmitting}
+          className="rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-900 disabled:cursor-not-allowed disabled:text-neutral-400"
+        >
+          Clear form
         </button>
       </div>
     </form>

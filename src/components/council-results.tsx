@@ -1,6 +1,12 @@
-import type { CouncilResult, CouncilSessionStatus, DecisionStatus } from "@/types/council";
+import type { CouncilResult, DecisionStatus } from "@/types/council";
 import { AdvisorCard } from "@/components/advisor-card";
 import { ChairmanCard } from "@/components/chairman-card";
+import { CouncilMetrics } from "@/components/council-metrics";
+import { CouncilStatusBanner } from "@/components/council-status-banner";
+import {
+  getUnavailableAdvisorNames,
+  sortAdvisorsForDisplay,
+} from "@/lib/council/council-display";
 
 const DECISION_STATUS_LABELS: Record<DecisionStatus, string> = {
   draft: "Draft",
@@ -8,20 +14,6 @@ const DECISION_STATUS_LABELS: Record<DecisionStatus, string> = {
   decided: "Decided",
   archived: "Archived",
 };
-
-const SESSION_STATUS_LABELS: Record<CouncilSessionStatus, string> = {
-  complete: "Complete",
-  partial: "Partial",
-  failed: "Failed",
-};
-
-function formatDuration(durationMs: number): string {
-  if (durationMs < 1000) {
-    return `${durationMs} ms`;
-  }
-
-  return `${(durationMs / 1000).toFixed(1)} s`;
-}
 
 function formatDateTime(isoDate: string): string {
   return new Intl.DateTimeFormat("en-US", {
@@ -32,20 +24,60 @@ function formatDateTime(isoDate: string): string {
 
 interface CouncilResultsProps {
   result: CouncilResult;
+  onStartNewDeliberation: () => void;
 }
 
-export function CouncilResults({ result }: CouncilResultsProps) {
+export function CouncilResults({ result, onStartNewDeliberation }: CouncilResultsProps) {
   const { decision } = result;
+  const sortedAdvisors = sortAdvisorsForDisplay(result.advisors);
+  const unavailableAdvisors = getUnavailableAdvisorNames(result);
+  const showChairman =
+    result.chairman &&
+    (result.chairman.status === "success" || result.status !== "failed");
 
   return (
     <section aria-label="Council results" className="space-y-8">
-      <div className="rounded-lg border border-neutral-200 bg-white p-6">
-        <h2 className="text-xl font-semibold text-neutral-900">Session Summary</h2>
+      <CouncilStatusBanner
+        status={result.status}
+        unavailableAdvisors={unavailableAdvisors}
+      />
 
-        <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+      {result.status === "failed" && result.chairman?.status === "failed" ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 p-5 text-sm text-red-800"
+        >
+          <p className="font-medium text-red-900">
+            The Council could not produce a usable final decision.
+          </p>
+          <p className="mt-2">
+            Review any available advisor perspectives below, adjust your decision if
+            needed, and try again.
+          </p>
+        </div>
+      ) : null}
+
+      {showChairman && result.chairman ? (
+        <ChairmanCard chairman={result.chairman} />
+      ) : null}
+
+      <div>
+        <h2 className="mb-4 text-lg font-semibold text-neutral-900">
+          Advisor perspectives
+        </h2>
+        <div className="grid gap-6 xl:grid-cols-2">
+          {sortedAdvisors.map((advisor) => (
+            <AdvisorCard key={advisor.persona.id} advisor={advisor} />
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-neutral-200 bg-white p-6">
+        <h2 className="text-lg font-semibold text-neutral-900">Decision submitted</h2>
+        <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-neutral-500">Decision ID</dt>
-            <dd className="mt-1 font-medium text-neutral-900">{decision.id}</dd>
+            <dt className="text-neutral-500">Decision title</dt>
+            <dd className="mt-1 font-medium text-neutral-900">{decision.title}</dd>
           </div>
           <div>
             <dt className="text-neutral-500">Created</dt>
@@ -54,20 +86,10 @@ export function CouncilResults({ result }: CouncilResultsProps) {
             </dd>
           </div>
           <div>
-            <dt className="text-neutral-500">Decision Status</dt>
+            <dt className="text-neutral-500">Decision status</dt>
             <dd className="mt-1 font-medium text-neutral-900">
               {DECISION_STATUS_LABELS[decision.status]}
             </dd>
-          </div>
-          <div>
-            <dt className="text-neutral-500">Council Session</dt>
-            <dd className="mt-1 font-medium text-neutral-900">
-              {SESSION_STATUS_LABELS[result.status]}
-            </dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-neutral-500">Decision Title</dt>
-            <dd className="mt-1 font-medium text-neutral-900">{decision.title}</dd>
           </div>
           <div className="sm:col-span-2">
             <dt className="text-neutral-500">Question</dt>
@@ -76,77 +98,40 @@ export function CouncilResults({ result }: CouncilResultsProps) {
           {decision.context ? (
             <div className="sm:col-span-2">
               <dt className="text-neutral-500">Context</dt>
-              <dd className="mt-1 leading-6 text-neutral-800">{decision.context}</dd>
+              <dd className="mt-1 whitespace-pre-wrap leading-6 text-neutral-800">
+                {decision.context}
+              </dd>
             </div>
           ) : null}
           {decision.constraints ? (
             <div className="sm:col-span-2">
               <dt className="text-neutral-500">Constraints</dt>
-              <dd className="mt-1 leading-6 text-neutral-800">
+              <dd className="mt-1 whitespace-pre-wrap leading-6 text-neutral-800">
                 {decision.constraints}
               </dd>
             </div>
           ) : null}
-          <div>
-            <dt className="text-neutral-500">Advisor Stage</dt>
-            <dd className="mt-1 font-medium text-neutral-900">
-              {formatDuration(result.advisorStageDurationMs)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-neutral-500">Chairman Stage</dt>
-            <dd className="mt-1 font-medium text-neutral-900">
-              {formatDuration(result.chairmanDurationMs)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-neutral-500">Total Duration</dt>
-            <dd className="mt-1 font-medium text-neutral-900">
-              {formatDuration(result.totalDurationMs)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-neutral-500">Execution ID</dt>
-            <dd className="mt-1 font-medium text-neutral-900">
-              {result.integrity.executionId}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-neutral-500">Language</dt>
-            <dd className="mt-1 font-medium text-neutral-900">
-              {result.integrity.language}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-neutral-500">Advisors</dt>
-            <dd className="mt-1 font-medium text-neutral-900">
-              {result.advisors.length} live
-            </dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-neutral-500">Chairman</dt>
-            <dd className="mt-1 font-medium text-neutral-900">
-              {result.chairman?.status === "success"
-                ? "Live Chairman (synthesized from advisor outputs)"
-                : result.chairman?.status === "failed"
-                  ? "Chairman synthesis failed"
-                  : "Not enabled"}
-            </dd>
-          </div>
+          {decision.expectedOutcome ? (
+            <div className="sm:col-span-2">
+              <dt className="text-neutral-500">Objectives</dt>
+              <dd className="mt-1 whitespace-pre-wrap leading-6 text-neutral-800">
+                {decision.expectedOutcome}
+              </dd>
+            </div>
+          ) : null}
         </dl>
       </div>
 
-      {result.chairman ? <ChairmanCard chairman={result.chairman} /> : null}
+      <CouncilMetrics result={result} />
 
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-neutral-900">
-          Advisor Perspectives
-        </h2>
-        <div className="grid gap-6 xl:grid-cols-2">
-          {result.advisors.map((advisor) => (
-            <AdvisorCard key={advisor.persona.id} advisor={advisor} />
-          ))}
-        </div>
+        <button
+          type="button"
+          onClick={onStartNewDeliberation}
+          className="rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-900"
+        >
+          Start another deliberation
+        </button>
       </div>
     </section>
   );
