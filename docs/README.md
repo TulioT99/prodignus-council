@@ -26,18 +26,21 @@ All engineering documentation in this repository follows the [OPS-0001 — Engin
 | -------- | ----- | ------ |
 | [ADR-0003](adr/ADR-0003-collective-intelligence-layer.md) | Collective Intelligence Layer | Accepted |
 | [ADR-0005](adr/ADR-0005-decision-council-advisors-v1.md) | Decision Council Advisors v1.0 | Accepted |
+| [ADR-0006](adr/ADR-0006-sprint-1-architecture-validation-strategy.md) | Sprint 1 Architecture Validation Strategy | Accepted |
 
 ## Engineering Specifications
 
 | Document | Title | Status |
 | -------- | ----- | ------ |
 | [ENG-0002](eng/ENG-0002-chairman-context-builder-technical-specification.md) | ChairmanContextBuilder Technical Specification | Approved for Implementation — Revision 1 |
+| [ENG-0003](eng/ENG-0003-sprint-1-execution-architecture.md) | Sprint 1 Execution Architecture | Proposed |
 
 ## Architecture Readiness Reviews
 
 | Document | Title | Outcome |
 | -------- | ----- | ------- |
 | [ARR-0001](arr/ARR-0001-architecture-readiness-review.md) | Architecture Readiness Review (Sprint 6) | PASS WITH RECOMMENDATIONS |
+| [ARR-0002](arr/ARR-0002-sprint-1-architecture-readiness-review.md) | Sprint 1 Architecture Readiness Review | PASS WITH OBSERVATIONS |
 
 ## Implementation Plans
 
