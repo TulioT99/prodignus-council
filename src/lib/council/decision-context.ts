@@ -9,6 +9,7 @@ import type {
   DecisionContext,
   DecisionContextAttachment,
 } from "@/types/council";
+import type { EvidencePackage } from "@/types/pkos";
 
 function freezeAttachments(
   attachments: DecisionContextAttachment[],
@@ -30,6 +31,7 @@ export function createDecisionContext(
     executionId?: string;
     language?: string;
     attachments?: DecisionContextAttachment[];
+    pkosEvidence?: EvidencePackage;
   },
 ): DecisionContext {
   const attachments = freezeAttachments(options?.attachments ?? []);
@@ -44,9 +46,31 @@ export function createDecisionContext(
     constraints: decision.constraints,
     objectives: decision.expectedOutcome,
     attachments,
+    pkosEvidence: options?.pkosEvidence,
     timestamp: decision.createdAt,
     status: decision.status,
     owner: decision.owner,
+  });
+}
+
+export function attachEvidenceToDecisionContext(
+  context: DecisionContext,
+  evidencePackage: EvidencePackage,
+): DecisionContext {
+  return Object.freeze({
+    executionId: context.executionId,
+    decisionId: context.decisionId,
+    title: context.title,
+    question: context.question,
+    language: context.language,
+    context: context.context,
+    constraints: context.constraints,
+    objectives: context.objectives,
+    attachments: freezeAttachments([...context.attachments]),
+    pkosEvidence: evidencePackage,
+    timestamp: context.timestamp,
+    status: context.status,
+    owner: context.owner,
   });
 }
 
@@ -61,6 +85,7 @@ export function cloneDecisionContext(context: DecisionContext): DecisionContext 
     constraints: context.constraints,
     objectives: context.objectives,
     attachments: freezeAttachments([...context.attachments]),
+    pkosEvidence: context.pkosEvidence,
     timestamp: context.timestamp,
     status: context.status,
     owner: context.owner,

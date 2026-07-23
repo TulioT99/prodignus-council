@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { EvidencePackage } from "@/types/pkos";
 import type {
   AdvisorResult,
   DecisionContext,
@@ -28,6 +29,7 @@ export interface ChairmanRequestContext {
   readonly timestamp: string;
   readonly status: DecisionStatus;
   readonly owner?: string;
+  readonly pkosEvidence?: EvidencePackage;
 }
 
 export interface ChairmanAdvisorExecutionMetadata {

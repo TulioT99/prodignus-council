@@ -14,6 +14,7 @@ import {
   buildExecutiveOutputRequirements,
   buildJsonFieldDiscipline,
 } from "@/lib/council/advisor-calibration";
+import { buildCouncilPromptContext } from "@/lib/council/evidence-prompt";
 import { assertAdvisorPromptIntegrity } from "@/lib/council/decision-context";
 import type { DecisionContext } from "@/types/council";
 
@@ -146,19 +147,12 @@ ${buildJsonFieldDiscipline({
 
 Return only valid JSON matching the required schema. Do not return markdown or conversational text outside the JSON object.`;
 
-  const userPrompt = `Evaluate the following product decision as the Product Strategy Advisor.
+  const userPrompt = `${buildCouncilPromptContext(decisionContext)}
 
-Execution ID: ${decisionContext.executionId}
-Language: ${decisionContext.language}
-Decision ID: ${decisionContext.decisionId}
-Title: ${decisionContext.title}
-Question: ${decisionContext.question}
-Context: ${decisionContext.context || "(none provided)"}
-Expected Outcome: ${decisionContext.objectives || "(none provided)"}
-Constraints: ${decisionContext.constraints || "(none provided)"}
 Attachments:
 ${formatAttachments(decisionContext)}
-Status: ${decisionContext.status}
+
+Evaluate the following product decision as the Product Strategy Advisor.
 
 Return JSON matching this schema exactly:
 

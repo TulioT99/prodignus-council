@@ -1,6 +1,7 @@
 import type { CouncilResult, DecisionStatus } from "@/types/council";
 import { AdvisorCard } from "@/components/advisor-card";
 import { ChairmanCard } from "@/components/chairman-card";
+import { PkosSourcesPanel } from "@/components/pkos-sources-panel";
 import { CouncilMetrics } from "@/components/council-metrics";
 import { CouncilStatusBanner } from "@/components/council-status-banner";
 import {
@@ -58,6 +59,10 @@ export function CouncilResults({ result, onStartNewDeliberation }: CouncilResult
 
       {showChairman && result.chairman ? (
         <ChairmanCard chairman={result.chairman} />
+      ) : null}
+
+      {result.pkosRetrieval ? (
+        <PkosSourcesPanel evidencePackage={result.pkosRetrieval} />
       ) : null}
 
       <div>

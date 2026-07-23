@@ -1,3 +1,5 @@
+import type { EvidencePackage } from "@/types/pkos";
+
 export type ThinkingLens =
   | "contrarian"
   | "product-strategy"
@@ -41,6 +43,7 @@ export type DecisionContext = {
   readonly constraints: string;
   readonly objectives?: string;
   readonly attachments: readonly DecisionContextAttachment[];
+  readonly pkosEvidence?: EvidencePackage;
   readonly timestamp: string;
   readonly status: DecisionStatus;
   readonly owner?: string;
@@ -325,6 +328,7 @@ export type CouncilResult = {
   advisorStageDurationMs: number;
   chairmanDurationMs: number;
   totalDurationMs: number;
+  pkosRetrieval?: EvidencePackage;
 };
 
 export type CouncilFormErrors = {

@@ -6,6 +6,7 @@ import {
   countSuccessfulAdvisors,
   getMissingAdvisorIds,
 } from "@/lib/council/chairman-policy";
+import { formatCanonicalEvidenceSection } from "@/lib/council/evidence-prompt";
 import type { ChairmanContext } from "@/lib/council/chairman-context.types";
 import { councilConfig } from "@/config/council";
 import type { AdvisorResult } from "@/types/council";
@@ -287,6 +288,8 @@ Constraints: ${request.constraints || "(none provided)"}
 Attachments:
 ${formatAttachments(chairmanContext)}
 Status: ${request.status}
+
+${formatCanonicalEvidenceSection(request.pkosEvidence)}
 
 === SYSTEM BOUNDARY: ADVISOR EVIDENCE ===
 

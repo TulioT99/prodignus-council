@@ -11,9 +11,11 @@ import {
 import { runChairman } from "@/lib/council/chairman-runner";
 import { determineCouncilSessionStatus } from "@/lib/council/council-status";
 import {
+  attachEvidenceToDecisionContext,
   createDecisionContext,
   recordDecisionContextIntegrity,
 } from "@/lib/council/decision-context";
+import { retrieveEvidenceForCouncil } from "@/lib/pkos/context-retrieval-engine";
 import { councilConfig } from "@/config/council";
 import { getAdvisorPersonaById } from "@/data/advisor-personas";
 import type { AdvisorResult, CouncilResult, Decision } from "@/types/council";
@@ -56,7 +58,12 @@ function resolveSettledAdvisorResult(
 
 export async function runCouncil(decision: Decision): Promise<CouncilResult> {
   const councilStartedAt = Date.now();
-  const decisionContext = createDecisionContext(decision);
+  const baseDecisionContext = createDecisionContext(decision);
+  const pkosRetrieval = retrieveEvidenceForCouncil(baseDecisionContext);
+  const decisionContext = attachEvidenceToDecisionContext(
+    baseDecisionContext,
+    pkosRetrieval,
+  );
   const integrity = recordDecisionContextIntegrity(
     decisionContext,
     ADVISOR_EXECUTION_ORDER,
@@ -99,5 +106,6 @@ export async function runCouncil(decision: Decision): Promise<CouncilResult> {
     advisorStageDurationMs,
     chairmanDurationMs,
     totalDurationMs,
+    pkosRetrieval,
   };
 }

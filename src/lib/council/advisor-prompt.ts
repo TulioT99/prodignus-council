@@ -13,6 +13,7 @@ import {
   buildDomainBoundaryGuidance,
   buildJsonFieldDiscipline,
 } from "@/lib/council/advisor-calibration";
+import { buildCouncilPromptContext } from "@/lib/council/evidence-prompt";
 import { assertAdvisorPromptIntegrity } from "@/lib/council/decision-context";
 import type { AdvisorPersona, DecisionContext, ThinkingLens } from "@/types/council";
 
@@ -176,19 +177,12 @@ ${ADVISOR_INCOMPLETE_INFORMATION_GUIDANCE}
 
 ${buildLensInstructions(persona.thinkingLens)}`;
 
-  const userPrompt = `Review the following decision and respond as ${persona.displayName}.
+  const userPrompt = `${buildCouncilPromptContext(decisionContext)}
 
-Execution ID: ${decisionContext.executionId}
-Language: ${decisionContext.language}
-Decision ID: ${decisionContext.decisionId}
-Title: ${decisionContext.title}
-Question: ${decisionContext.question}
-Context: ${decisionContext.context || "(none provided)"}
-Objectives: ${decisionContext.objectives || "(none provided)"}
-Constraints: ${decisionContext.constraints || "(none provided)"}
 Attachments:
 ${formatAttachments(decisionContext)}
-Status: ${decisionContext.status}
+
+Review the following decision and respond as ${persona.displayName}.
 
 Return JSON matching this schema exactly:
 

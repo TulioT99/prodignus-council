@@ -29,6 +29,7 @@ function freezeRequestContext(
     timestamp: decisionContext.timestamp,
     status: decisionContext.status,
     owner: decisionContext.owner,
+    pkosEvidence: decisionContext.pkosEvidence,
   });
 }
 
