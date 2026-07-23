@@ -258,6 +258,10 @@ export async function runChairman(
       userPrompt,
       temperature: REQUEST_TEMPERATURE,
       timeoutMs: resolveOpenRouterTimeoutMs(),
+      executionContext: {
+        caller: "chairman",
+        executionId: decisionContext.executionId,
+      },
     });
 
     const content = parseChairmanResponseContent(completion.content);

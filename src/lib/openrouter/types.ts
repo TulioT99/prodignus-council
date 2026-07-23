@@ -20,9 +20,10 @@ export type OpenRouterUsage = {
 };
 
 export type OpenRouterChatCompletionChoice = {
+  finish_reason?: string;
   message?: {
     role?: string;
-    content?: string;
+    content?: unknown;
   };
 };
 

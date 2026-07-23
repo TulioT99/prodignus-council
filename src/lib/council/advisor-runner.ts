@@ -210,6 +210,11 @@ export async function runAdvisor(
       userPrompt,
       temperature: REQUEST_TEMPERATURE,
       timeoutMs: resolveOpenRouterTimeoutMs(),
+      executionContext: {
+        caller: "advisor",
+        executionId: decisionContext.executionId,
+        advisorId: persona.id,
+      },
     });
 
     const parsed = parseAdvisorResponseForPersona(persona.id, completion.content);

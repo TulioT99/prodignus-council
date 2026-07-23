@@ -1,6 +1,13 @@
 import "server-only";
 
 import { councilConfig } from "@/config/council";
+import type { OpenRouterExecutionContext } from "@/lib/openrouter/execution-context";
+import {
+  buildProviderResponseDiagnosticSnapshot,
+  classifyProviderPayloadFailure,
+  logChairmanLifecycleEvent,
+  logInvalidProviderResponseDiagnostic,
+} from "@/lib/openrouter/provider-response-diagnostics";
 import {
   OpenRouterClientError,
   type OpenRouterChatCompletionResponse,
@@ -18,6 +25,7 @@ export type CallOpenRouterOptions = {
   userPrompt: string;
   temperature?: number;
   timeoutMs?: number;
+  executionContext?: OpenRouterExecutionContext;
 };
 
 export function resolveOpenRouterTimeoutMs(): number {
@@ -70,8 +78,59 @@ function sanitizeProviderMessage(message: string | undefined): string {
   return message.trim().slice(0, 500);
 }
 
-function parseProviderResponse(payload: unknown): OpenRouterChatCompletionResponse {
+function isChairmanContext(
+  executionContext: OpenRouterExecutionContext | undefined,
+): executionContext is OpenRouterExecutionContext & { caller: "chairman" } {
+  return executionContext?.caller === "chairman";
+}
+
+function logInvalidProviderResponse(
+  input: {
+    failureReason: Parameters<typeof buildProviderResponseDiagnosticSnapshot>[0]["failureReason"];
+    payload: unknown;
+    httpStatus: number;
+    model: string;
+    attempt: number;
+    elapsedMs: number;
+    executionContext?: OpenRouterExecutionContext;
+  },
+): void {
+  const snapshot = buildProviderResponseDiagnosticSnapshot(input);
+  logInvalidProviderResponseDiagnostic(snapshot);
+
+  if (isChairmanContext(input.executionContext)) {
+    logChairmanLifecycleEvent({
+      event: "chairman_invalid_provider_response",
+      executionId: input.executionContext.executionId,
+      attempt: input.attempt,
+      model: input.model,
+      elapsedMs: input.elapsedMs,
+      errorCode: "INVALID_PROVIDER_RESPONSE",
+      failureReason: input.failureReason,
+    });
+  }
+}
+
+function parseProviderResponse(
+  payload: unknown,
+  diagnosticContext: {
+    httpStatus: number;
+    model: string;
+    attempt: number;
+    elapsedMs: number;
+    executionContext?: OpenRouterExecutionContext;
+  },
+): OpenRouterChatCompletionResponse {
   if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
+    const failureReason =
+      payload === null ? "PAYLOAD_NULL" : "PAYLOAD_NOT_OBJECT";
+
+    logInvalidProviderResponse({
+      failureReason,
+      payload,
+      ...diagnosticContext,
+    });
+
     throw new OpenRouterClientError(
       "INVALID_PROVIDER_RESPONSE",
       "The model provider returned an unreadable response.",
@@ -82,10 +141,42 @@ function parseProviderResponse(payload: unknown): OpenRouterChatCompletionRespon
   return payload as OpenRouterChatCompletionResponse;
 }
 
-function extractAssistantContent(response: OpenRouterChatCompletionResponse): string {
+function extractAssistantContent(
+  response: OpenRouterChatCompletionResponse,
+  payload: unknown,
+  diagnosticContext: {
+    httpStatus: number;
+    model: string;
+    attempt: number;
+    elapsedMs: number;
+    executionContext?: OpenRouterExecutionContext;
+  },
+): string {
+  const failureReason = classifyProviderPayloadFailure(payload);
+
+  if (failureReason) {
+    logInvalidProviderResponse({
+      failureReason,
+      payload,
+      ...diagnosticContext,
+    });
+
+    throw new OpenRouterClientError(
+      "INVALID_PROVIDER_RESPONSE",
+      "The model provider did not return assistant content.",
+      true,
+    );
+  }
+
   const content = response.choices?.[0]?.message?.content;
 
   if (typeof content !== "string" || !content.trim()) {
+    logInvalidProviderResponse({
+      failureReason: "CONTENT_EMPTY_STRING",
+      payload,
+      ...diagnosticContext,
+    });
+
     throw new OpenRouterClientError(
       "INVALID_PROVIDER_RESPONSE",
       "The model provider did not return assistant content.",
@@ -122,6 +213,7 @@ function extractUsage(response: OpenRouterChatCompletionResponse) {
 
 async function executeOpenRouterRequest(
   options: CallOpenRouterOptions,
+  attempt: number,
 ): Promise<OpenRouterCompletionResult> {
   const {
     model,
@@ -129,6 +221,7 @@ async function executeOpenRouterRequest(
     userPrompt,
     temperature = DEFAULT_TEMPERATURE,
     timeoutMs = resolveOpenRouterTimeoutMs(),
+    executionContext,
   } = options;
 
   if (!model.trim()) {
@@ -137,6 +230,15 @@ async function executeOpenRouterRequest(
       "A model ID is required for OpenRouter requests.",
       false,
     );
+  }
+
+  if (isChairmanContext(executionContext)) {
+    logChairmanLifecycleEvent({
+      event: "chairman_attempt_started",
+      executionId: executionContext.executionId,
+      attempt,
+      model,
+    });
   }
 
   const apiKey = getApiKey();
@@ -162,11 +264,32 @@ async function executeOpenRouterRequest(
     });
 
     const durationMs = Date.now() - startedAt;
+
+    if (isChairmanContext(executionContext)) {
+      logChairmanLifecycleEvent({
+        event: "chairman_http_response_received",
+        executionId: executionContext.executionId,
+        attempt,
+        model,
+        elapsedMs: durationMs,
+      });
+    }
+
     let payload: unknown;
 
     try {
       payload = await response.json();
     } catch {
+      logInvalidProviderResponse({
+        failureReason: "HTTP_BODY_NOT_JSON",
+        payload: null,
+        httpStatus: response.status,
+        model,
+        attempt,
+        elapsedMs: durationMs,
+        executionContext,
+      });
+
       throw new OpenRouterClientError(
         "INVALID_PROVIDER_RESPONSE",
         "The model provider returned malformed JSON.",
@@ -174,7 +297,15 @@ async function executeOpenRouterRequest(
       );
     }
 
-    const parsed = parseProviderResponse(payload);
+    const diagnosticContext = {
+      httpStatus: response.status,
+      model,
+      attempt,
+      elapsedMs: durationMs,
+      executionContext,
+    };
+
+    const parsed = parseProviderResponse(payload, diagnosticContext);
 
     if (!response.ok) {
       const status = response.status;
@@ -191,7 +322,7 @@ async function executeOpenRouterRequest(
       );
     }
 
-    const content = extractAssistantContent(parsed);
+    const content = extractAssistantContent(parsed, payload, diagnosticContext);
     const usage = extractUsage(parsed);
     const returnedModel =
       typeof parsed.model === "string" && parsed.model.trim()
@@ -236,10 +367,22 @@ export async function callOpenRouter(
 ): Promise<OpenRouterCompletionResult> {
   let retryCount = 0;
   let lastError: OpenRouterClientError | undefined;
+  const { executionContext } = options;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
     try {
-      const result = await executeOpenRouterRequest(options);
+      const result = await executeOpenRouterRequest(options, attempt);
+
+      if (isChairmanContext(executionContext)) {
+        logChairmanLifecycleEvent({
+          event: "chairman_completed",
+          executionId: executionContext.executionId,
+          attempt,
+          model: options.model,
+          elapsedMs: result.durationMs,
+        });
+      }
+
       return {
         ...result,
         retryCount,
@@ -256,7 +399,28 @@ export async function callOpenRouter(
         console.warn(
           `[OpenRouter] Retrying request: attempt=${attempt + 1} code=${error.code}`,
         );
+
+        if (isChairmanContext(executionContext)) {
+          logChairmanLifecycleEvent({
+            event: "chairman_retry_triggered",
+            executionId: executionContext.executionId,
+            attempt: attempt + 1,
+            model: options.model,
+            errorCode: error.code,
+          });
+        }
+
         continue;
+      }
+
+      if (isChairmanContext(executionContext)) {
+        logChairmanLifecycleEvent({
+          event: "chairman_failed_after_retries",
+          executionId: executionContext.executionId,
+          attempt,
+          model: options.model,
+          errorCode: error.code,
+        });
       }
 
       throw error;
