@@ -10,6 +10,7 @@ All engineering documentation in this repository follows the [OPS-0001 — Engin
 | Architecture Decision Records | `docs/adr/` | `ADR-NNNN-*` | Architectural decisions and rationale |
 | Engineering Specifications | `docs/eng/` | `ENG-NNNN-*` | Implementation contracts, interfaces, and invariants |
 | Architecture Readiness Reviews | `docs/arr/` | `ARR-NNNN-*` | Pre-implementation governance checkpoints |
+| Architecture Assessments | `docs/assessments/` | Descriptive filename | Historical read-only architecture baselines |
 | Implementation Plans | `docs/imp/` | `IMP-NNNN-*` | Execution strategy and validation gates |
 | Architecture Implementation Reviews | `docs/air/` | `AIR-NNNN-*` | Post-implementation architectural compliance assessment |
 | Implementation Completion Reports | `docs/icr/` | `ICR-NNNN-*` | Implementation delivery certification |
@@ -41,6 +42,12 @@ All engineering documentation in this repository follows the [OPS-0001 — Engin
 | -------- | ----- | ------- |
 | [ARR-0001](arr/ARR-0001-architecture-readiness-review.md) | Architecture Readiness Review (Sprint 6) | PASS WITH RECOMMENDATIONS |
 | [ARR-0002](arr/ARR-0002-sprint-1-architecture-readiness-review.md) | Sprint 1 Architecture Readiness Review | PASS WITH OBSERVATIONS |
+
+## Architecture Assessments
+
+| Document | Title | Status |
+| -------- | ----- | ------ |
+| [decision-council-architecture-assessment.md](assessments/decision-council-architecture-assessment.md) | Decision Council Architecture Assessment | Historical (baseline `cc90061`) |
 
 ## Implementation Plans
 

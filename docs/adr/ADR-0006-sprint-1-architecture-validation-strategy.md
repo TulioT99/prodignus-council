@@ -21,7 +21,7 @@ Verified current repository evidence confirms that the execution architecture is
 * end-to-end orchestration exists through `runCouncil`;
 * no runtime mock Advisor or mock Chairman execution path exists under `src/`.
 
-The root architecture assessment (`DECISION_COUNCIL_ARCHITECTURE_ASSESSMENT.md`, commit `cc90061`) remains valid **historical evidence** for architectural observations at that baseline. Verified current source code supersedes it **only for present-state implementation facts**. Where the assessment described a hybrid mock posture, that description no longer applies to the current repository.
+The root architecture assessment ([`docs/assessments/decision-council-architecture-assessment.md`](../assessments/decision-council-architecture-assessment.md), commit `cc90061`) remains valid **historical evidence** for architectural observations at that baseline. Verified current source code supersedes it **only for present-state implementation facts**. Where the assessment described a hybrid mock posture, that description no longer applies to the current repository.
 
 A read-only architecture assessment concluded that the repository presents a **solid architectural foundation**. Remaining gaps are primarily **validation evidence**, not structural deficiency. The highest architectural uncertainty is whether the **end-to-end execution pipeline** — Advisor execution, Chairman execution, and orchestration contracts — has been **formally validated** as a cohesive system.
 
@@ -250,7 +250,7 @@ Detailed validation methods, file-level changes, test plans, and deliverables ar
 | [OPS-0001 — Engineering Workflow Standard](../ops/OPS-0001-engineering-workflow-standard.md) | Governance and lifecycle standard |
 | [ADR-0003 — Collective Intelligence Layer](./ADR-0003-collective-intelligence-layer.md) | Collective-intelligence architecture baseline |
 | [ADR-0005 — Decision Council Advisors v1.0](./ADR-0005-decision-council-advisors-v1.md) | Advisor layer stability baseline |
-| [DECISION_COUNCIL_ARCHITECTURE_ASSESSMENT.md](../../DECISION_COUNCIL_ARCHITECTURE_ASSESSMENT.md) | Historical architecture assessment (commit `cc90061`); superseded for present-state execution facts only |
+| [decision-council-architecture-assessment.md](../assessments/decision-council-architecture-assessment.md) | Historical architecture assessment (baseline commit `cc90061`); superseded for present-state execution facts only |
 
 ---
 

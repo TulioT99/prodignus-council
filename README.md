@@ -54,7 +54,7 @@ Only the advisor perspective (persona and thinking lens) may differ between advi
 
 Engineering documentation follows the [OPS-0001 — Engineering Workflow Standard](docs/ops/OPS-0001-engineering-workflow-standard.md).
 
-See the [documentation index](docs/README.md) for ADRs, engineering specifications, architecture readiness reviews, implementation plans, architecture implementation reviews, completion reports, and related governance artifacts.
+See the [documentation index](docs/README.md) for ADRs, engineering specifications, architecture readiness reviews, architecture assessments, implementation plans, architecture implementation reviews, completion reports, and related governance artifacts.
 
 Sprint 6 governance chain: [ADR-0003](docs/adr/ADR-0003-collective-intelligence-layer.md) → [ENG-0002](docs/eng/ENG-0002-chairman-context-builder-technical-specification.md) → [ARR-0001](docs/arr/ARR-0001-architecture-readiness-review.md) → [IMP-0002](docs/imp/IMP-0002-chairman-context-builder-implementation-plan.md) → [AIR-0001](docs/air/AIR-0001-chairman-context-builder-architecture-implementation-review.md) → [ICR-0002](docs/icr/ICR-0002-chairman-context-builder-implementation-completion-report.md).
 

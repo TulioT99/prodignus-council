@@ -110,7 +110,7 @@ This specification does not include:
 
 ### 4.1 Repository evidence summary
 
-The current repository implements a **live-only server-side execution pipeline** with all five Advisors configured for live execution. No mock advisor templates or mock chairman modules exist under `src/`. The historical baseline described in `DECISION_COUNCIL_ARCHITECTURE_ASSESSMENT.md` (commit `cc90061`) remains valid **historical evidence** for architectural observations at that baseline. Verified current source code supersedes it **only for present-state implementation facts**. Architectural observations in the assessment may remain relevant where not contradicted by current evidence.
+The current repository implements a **live-only server-side execution pipeline** with all five Advisors configured for live execution. No mock advisor templates or mock chairman modules exist under `src/`. The historical baseline described in [`docs/assessments/decision-council-architecture-assessment.md`](../assessments/decision-council-architecture-assessment.md) (commit `cc90061`) remains valid **historical evidence** for architectural observations at that baseline. Verified current source code supersedes it **only for present-state implementation facts**. Architectural observations in the assessment may remain relevant where not contradicted by current evidence.
 
 ### 4.2 Implemented components
 
@@ -1018,7 +1018,7 @@ AIR / ICR (future)
 | [IMP-0002 — ChairmanContextBuilder Implementation Plan](../imp/IMP-0002-chairman-context-builder-implementation-plan.md) | Prior implementation plan patterns |
 | [AIR-0001 — Architecture Implementation Review](../air/AIR-0001-chairman-context-builder-architecture-implementation-review.md) | ChairmanContextBuilder compliance evidence |
 | [ICR-0002 — Implementation Completion Report](../icr/ICR-0002-chairman-context-builder-implementation-completion-report.md) | ChairmanContextBuilder delivery evidence |
-| [DECISION_COUNCIL_ARCHITECTURE_ASSESSMENT.md](../../DECISION_COUNCIL_ARCHITECTURE_ASSESSMENT.md) | Historical architecture assessment (baseline commit `cc90061`) |
+| [decision-council-architecture-assessment.md](../assessments/decision-council-architecture-assessment.md) | Historical architecture assessment (baseline commit `cc90061`) |
 
 ---
 

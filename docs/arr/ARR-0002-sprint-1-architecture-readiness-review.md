@@ -18,7 +18,7 @@
 - `docs/imp/IMP-0002-chairman-context-builder-implementation-plan.md`
 - `docs/icr/ICR-0002-chairman-context-builder-implementation-completion-report.md`
 - `docs/README.md`
-- `DECISION_COUNCIL_ARCHITECTURE_ASSESSMENT.md` (historical baseline `cc90061`)
+- `docs/assessments/decision-council-architecture-assessment.md` (historical baseline `cc90061`)
 
 **Repository evidence inspected:**
 
@@ -74,7 +74,7 @@ Sprint 1 validation implementation **may proceed** to IMP-0003 and subsequent ex
 | **m-01** | Minor | **Undocumented failure mode.** `runAdvisor` throws on persona/config ID mismatch (`advisor-runner.ts:126-129`) as generic `Error`. Not listed in ENG-0003 §14 failure semantics; would surface as HTTP 500. |
 | **m-02** | Minor | **`determineCouncilSessionStatus` success count nuance.** `successfulCount` counts all advisors, not only `liveAdvisorIds` (`council-status.ts:11`). Harmless today (all five live); latent inconsistency if mock advisors are introduced. |
 | **m-03** | Minor | **Unused prototype config flags.** `prototypeMode`, `prototypeAdvisorIds`, `prototypeChairman` in `councilConfig` are unread. Correctly deferred but may confuse operators (OQ-006). |
-| **m-04** | Minor | **Historical assessment drift.** `DECISION_COUNCIL_ARCHITECTURE_ASSESSMENT.md` describes hybrid mock posture at `cc90061`. ADR-0006 and ENG-0003 correctly supersede for present-state facts; assessment recommendations (e.g. Phase 1 enable five advisors first) conflict with ADR-0006 sequencing — governance reconciled in ADR, not assessment. |
+| **m-04** | Minor | **Historical assessment drift.** [decision-council-architecture-assessment.md](../assessments/decision-council-architecture-assessment.md) describes hybrid mock posture at `cc90061`. ADR-0006 and ENG-0003 correctly supersede for present-state facts; assessment recommendations (e.g. Phase 1 enable five advisors first) conflict with ADR-0006 sequencing — governance reconciled in ADR, not assessment. |
 | **m-05** | Minor | **`council-status.test.mjs` uses simplified config.** Tests use `liveAdvisorIds: ["ADV-001"]` only, not production five-advisor config. |
 
 ### Observations
