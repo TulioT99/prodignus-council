@@ -5,6 +5,7 @@ import { CouncilMetrics } from "@/components/council-metrics";
 import { CouncilStatusBanner } from "@/components/council-status-banner";
 import {
   getUnavailableAdvisorNames,
+  shouldRenderCouncilRecommendation,
   sortAdvisorsForDisplay,
 } from "@/lib/council/council-display";
 
@@ -31,9 +32,7 @@ export function CouncilResults({ result, onStartNewDeliberation }: CouncilResult
   const { decision } = result;
   const sortedAdvisors = sortAdvisorsForDisplay(result.advisors);
   const unavailableAdvisors = getUnavailableAdvisorNames(result);
-  const showChairman =
-    result.chairman &&
-    (result.chairman.status === "success" || result.status !== "failed");
+  const showChairman = shouldRenderCouncilRecommendation(result.chairman);
 
   return (
     <section aria-label="Council results" className="space-y-8">

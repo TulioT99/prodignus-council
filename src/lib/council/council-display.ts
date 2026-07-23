@@ -32,6 +32,99 @@ export const CHAIRMAN_RECOMMENDATION_LABELS: Record<ChairmanRecommendationType, 
   run_bounded_experiment: "Run a bounded experiment",
 };
 
+/** Executive headline shown above the Council Recommendation briefing. */
+export const CHAIRMAN_RECOMMENDATION_HEADLINES: Record<ChairmanRecommendationType, string> = {
+  proceed: "Proceed",
+  proceed_with_conditions: "Proceed with conditions",
+  defer: "Gather more evidence",
+  do_not_proceed: "Do not proceed",
+  run_bounded_experiment: "Proceed with a bounded pilot",
+};
+
+export const COUNCIL_RECOMMENDATION_UI = {
+  title: "Council Recommendation",
+  overallConfidence: "Overall confidence",
+  decisionSummary: "Decision summary",
+  whyRecommendation: "Why this recommendation?",
+  keyRisks: "Key risks",
+  conditionsForSuccess: "Conditions for success",
+  suggestedNextSteps: "Suggested next steps",
+  priorityRisks: "Priority risks",
+  keyReasoning: "Key reasoning",
+  showFullRationale: "Show full rationale",
+  hideFullRationale: "Hide full rationale",
+  viewAdditionalRisks: (count: number) =>
+    `View ${count} additional risk${count === 1 ? "" : "s"}`,
+  noRisks: "No specific risks were included in the Council synthesis.",
+  noConditions: "No specific conditions were included in the Council synthesis.",
+  noNextSteps: "No suggested next steps were included in the Council synthesis.",
+  supplementaryAnalysis: "Additional Council analysis",
+  owner: "Owner",
+  expectedOutcome: "Expected outcome",
+} as const;
+
+export type CouncilRecommendationBriefing = {
+  headline: string;
+  overallConfidenceLabel: string;
+  decisionSummary: string | null;
+  whyRecommendation: string | null;
+  keyRisks: string[];
+  conditions: string[];
+  nextSteps: ChairmanResult["nextActions"];
+};
+
+function normalizeComparableText(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function isDuplicateText(left: string, right: string): boolean {
+  return normalizeComparableText(left) === normalizeComparableText(right);
+}
+
+export function formatOverallConfidencePercent(confidence: number): string {
+  return `${Math.round(confidence * 100)}%`;
+}
+
+export function buildCouncilRecommendationBriefing(
+  chairman: ChairmanResult,
+): CouncilRecommendationBriefing {
+  const headline = CHAIRMAN_RECOMMENDATION_HEADLINES[chairman.recommendationType];
+
+  let decisionSummary = chairman.decisionStatement.trim();
+  if (!decisionSummary || isDuplicateText(decisionSummary, headline)) {
+    const alternateSummary = chairman.executiveSummary.trim();
+    decisionSummary =
+      alternateSummary && !isDuplicateText(alternateSummary, headline)
+        ? alternateSummary
+        : "";
+  }
+
+  let whyRecommendation = chairman.finalRecommendation.trim();
+  if (
+    !whyRecommendation ||
+    (decisionSummary && isDuplicateText(whyRecommendation, decisionSummary)) ||
+    isDuplicateText(whyRecommendation, headline)
+  ) {
+    const alternateRationale = chairman.executiveSummary.trim();
+    whyRecommendation =
+      alternateRationale &&
+      !isDuplicateText(alternateRationale, headline) &&
+      (!decisionSummary || !isDuplicateText(alternateRationale, decisionSummary))
+        ? alternateRationale
+        : "";
+  }
+
+  return {
+    headline,
+    overallConfidenceLabel: formatOverallConfidencePercent(chairman.confidence),
+    decisionSummary: decisionSummary || null,
+    whyRecommendation: whyRecommendation || null,
+    keyRisks: chairman.risks,
+    conditions: chairman.conditions,
+    nextSteps: chairman.nextActions,
+  };
+}
+
 export const ADVISOR_RECOMMENDATION_LABELS: Record<CouncilDecision, string> = {
   proceed: "Proceed",
   proceed_with_conditions: "Proceed with conditions",
@@ -174,4 +267,10 @@ export function shouldShowBoundedExperimentClarity(chairman: ChairmanResult): bo
     chairman.status === "success" &&
     chairman.recommendationType === "run_bounded_experiment"
   );
+}
+
+export function shouldRenderCouncilRecommendation(
+  chairman: ChairmanResult | undefined,
+): boolean {
+  return chairman?.status === "success";
 }
