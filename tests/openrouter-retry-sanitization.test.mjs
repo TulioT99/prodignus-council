@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, mock, test } from "node:test";
 
+import { resetRuntimeConfigForTests } from "../src/config/runtime.ts";
+
 /**
  * Sanitization + retry integration against the OpenRouter adapter boundary.
  * Confirms AC-S-02: raw provider body / secrets never surface on client errors.
@@ -13,11 +15,13 @@ beforeEach(() => {
   originalFetch = globalThis.fetch;
   originalEnv = { ...process.env };
   process.env.OPENROUTER_API_KEY = "test-key-should-not-leak";
+  resetRuntimeConfigForTests();
 });
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
   process.env = originalEnv;
+  resetRuntimeConfigForTests();
   mock.restoreAll();
 });
 
@@ -85,6 +89,37 @@ test("non-retryable configuration failures are not retried", async () => {
   );
 
   assert.equal(globalThis.fetch.mock.callCount(), 1);
+});
+
+test("rate_limited failures preserve failureCategory for retry delay (AR-003)", async () => {
+  globalThis.fetch = mock.fn(async () => ({
+    ok: false,
+    status: 429,
+    json: async () => ({
+      error: { message: "rate limit secret=should-not-leak" },
+    }),
+  }));
+
+  const { callOpenRouter } = await import("../src/lib/openrouter/client.ts");
+  const { OpenRouterClientError } = await import("../src/lib/openrouter/types.ts");
+
+  await assert.rejects(
+    () =>
+      callOpenRouter({
+        model: "test/model",
+        systemPrompt: "system",
+        userPrompt: "user",
+      }),
+    (error) => {
+      assert.ok(error instanceof OpenRouterClientError);
+      assert.equal(error.failureCategory, "rate_limited");
+      assert.equal(error.retryable, true);
+      assert.doesNotMatch(error.message, /secret=/i);
+      return true;
+    },
+  );
+
+  assert.equal(globalThis.fetch.mock.callCount(), 3);
 });
 
 test("successful request after a transient retry", async () => {

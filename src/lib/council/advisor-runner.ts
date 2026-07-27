@@ -12,6 +12,7 @@ import {
   ProviderTimeoutError,
   toAdvisorSafeMessage,
 } from "@/lib/council/errors";
+import { getRuntimeConfig } from "@/config/runtime";
 import { callOpenRouter, resolveOpenRouterTimeoutMs } from "@/lib/openrouter/client";
 import { OpenRouterClientError } from "@/lib/openrouter/types";
 import type {
@@ -21,7 +22,6 @@ import type {
   DecisionContext,
 } from "@/types/council";
 
-const REQUEST_TEMPERATURE = 0.3;
 const UNCONFIGURED_MODEL_LABEL = "Unconfigured model";
 
 function resolveModel(modelEnvVar: string): string {
@@ -204,11 +204,12 @@ export async function runAdvisor(
   );
 
   try {
+    const runtime = getRuntimeConfig();
     const completion = await callOpenRouter({
       model,
       systemPrompt,
       userPrompt,
-      temperature: REQUEST_TEMPERATURE,
+      temperature: runtime.openRouter.defaultTemperature,
       timeoutMs: resolveOpenRouterTimeoutMs(),
       executionContext: {
         caller: "advisor",

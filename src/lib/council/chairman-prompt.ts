@@ -1,14 +1,14 @@
 import "server-only";
 
 import {
-  CHAIRMAN_COMPLETE_ADVISOR_THRESHOLD,
-  CHAIRMAN_MINIMUM_ADVISORS_FOR_SYNTHESIS,
   countSuccessfulAdvisors,
+  getChairmanCompleteAdvisorThreshold,
+  getChairmanMinimumAdvisorsForSynthesis,
   getMissingAdvisorIds,
 } from "@/lib/council/chairman-policy";
 import { formatCanonicalEvidenceSection } from "@/lib/council/evidence-prompt";
 import type { ChairmanContext } from "@/lib/council/chairman-context.types";
-import { councilConfig } from "@/config/council";
+import { getRuntimeConfig } from "@/config/runtime";
 import type { AdvisorResult } from "@/types/council";
 
 const CHAIRMAN_RESPONSE_SCHEMA = `{
@@ -198,15 +198,18 @@ function buildPartialFailureGuidance(
   successfulCount: number,
   missingAdvisorIds: string[],
 ): string {
-  if (successfulCount >= CHAIRMAN_COMPLETE_ADVISOR_THRESHOLD) {
+  const completeThreshold = getChairmanCompleteAdvisorThreshold();
+  const synthesisMinimum = getChairmanMinimumAdvisorsForSynthesis();
+
+  if (successfulCount >= completeThreshold) {
     return "All required perspectives are available. Perform a normal synthesis.";
   }
 
-  if (successfulCount === CHAIRMAN_MINIMUM_ADVISORS_FOR_SYNTHESIS) {
+  if (successfulCount === synthesisMinimum) {
     return `Only ${successfulCount} advisors succeeded. Synthesize with reduced confidence, explicitly warn that the council lacked full perspective coverage, and identify missing perspectives: ${missingAdvisorIds.join(", ")}.`;
   }
 
-  return `This council should not produce a substantive final decision because fewer than ${CHAIRMAN_MINIMUM_ADVISORS_FOR_SYNTHESIS} advisors succeeded.`;
+  return `This council should not produce a substantive final decision because fewer than ${synthesisMinimum} advisors succeeded.`;
 }
 
 export function buildChairmanPrompts(chairmanContext: ChairmanContext): {
@@ -224,7 +227,7 @@ export function buildChairmanPrompts(chairmanContext: ChairmanContext): {
   );
   const missingAdvisorIds = getMissingAdvisorIds(
     chairmanContext.advisors.map((entry) => entry.result),
-    councilConfig.liveAdvisorIds,
+    getRuntimeConfig().advisors.enabledAdvisorIds,
   );
 
   const successfulSection =

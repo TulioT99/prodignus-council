@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { afterEach, test } from "node:test";
 
 import {
   DEFAULT_MAX_RETRIES,
@@ -9,6 +9,11 @@ import {
   resolveMaxAttempts,
   shouldRetryAttempt,
 } from "../src/lib/retry/policy.ts";
+import { resetRuntimeConfigForTests } from "../src/config/runtime.ts";
+
+afterEach(() => {
+  resetRuntimeConfigForTests();
+});
 
 test("default policy uses maxAttempts semantics (initial + retries)", () => {
   assert.equal(DEFAULT_RETRY_POLICY.maxAttempts, 3);

@@ -1,6 +1,6 @@
 import {
-  CHAIRMAN_MINIMUM_ADVISORS_FOR_SYNTHESIS,
   countSuccessfulAdvisors,
+  getChairmanMinimumAdvisorsForSynthesis,
 } from "@/lib/council/chairman-policy";
 import type {
   AdvisorResult,
@@ -45,7 +45,7 @@ export function severityForSessionStatus(
 
 export function deriveCouncilTerminalOutcome(
   result: Pick<CouncilResult, "status" | "advisors" | "chairman">,
-  minimumSuccessfulAdvisors: number = CHAIRMAN_MINIMUM_ADVISORS_FOR_SYNTHESIS,
+  minimumSuccessfulAdvisors: number = getChairmanMinimumAdvisorsForSynthesis(),
 ): CouncilTerminalOutcome {
   const sessionStatus = result.status;
   const sessionSeverity = severityForSessionStatus(sessionStatus);

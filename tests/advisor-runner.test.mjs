@@ -96,13 +96,15 @@ beforeEach(() => {
   }
 });
 
-afterEach(() => {
+afterEach(async () => {
   globalThis.fetch = originalFetch;
   process.env.OPENROUTER_API_KEY = originalEnv.OPENROUTER_API_KEY;
   process.env.OPENROUTER_REQUEST_TIMEOUT_MS = originalEnv.OPENROUTER_REQUEST_TIMEOUT_MS;
   for (const key of Object.keys(advisorModels)) {
     process.env[key] = originalEnv[key];
   }
+  const { resetRuntimeConfigForTests } = await import("../src/config/runtime.ts");
+  resetRuntimeConfigForTests();
   mock.restoreAll();
 });
 
@@ -355,7 +357,9 @@ test("callOpenRouter retries transient provider failures", async () => {
 });
 
 test("resolveOpenRouterTimeoutMs uses configured timeout value", async () => {
+  const { resetRuntimeConfigForTests } = await import("../src/config/runtime.ts");
   process.env.OPENROUTER_REQUEST_TIMEOUT_MS = "1500";
+  resetRuntimeConfigForTests();
 
   const { resolveOpenRouterTimeoutMs } = await import("../src/lib/openrouter/client.ts");
   assert.equal(resolveOpenRouterTimeoutMs(), 1500);

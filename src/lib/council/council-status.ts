@@ -4,19 +4,21 @@ import type {
   CouncilSessionStatus,
 } from "@/types/council";
 import {
-  CHAIRMAN_COMPLETE_ADVISOR_THRESHOLD,
-  CHAIRMAN_MINIMUM_ADVISORS_FOR_SYNTHESIS,
   countSuccessfulAdvisors,
+  getChairmanCompleteAdvisorThreshold,
+  getChairmanMinimumAdvisorsForSynthesis,
 } from "@/lib/council/chairman-policy";
 
 export function determineCouncilSessionStatus(
   advisors: AdvisorResult[],
   chairman: ChairmanResult | undefined,
-  minimumSuccessfulAdvisors: number = CHAIRMAN_MINIMUM_ADVISORS_FOR_SYNTHESIS,
+  minimumSuccessfulAdvisors: number = getChairmanMinimumAdvisorsForSynthesis(),
 ): CouncilSessionStatus {
   const successfulCount = countSuccessfulAdvisors(advisors);
   const chairmanSucceeded = chairman?.status === "success";
   const chairmanInsufficient = chairman?.insufficientCouncil === true;
+  const completeThreshold = getChairmanCompleteAdvisorThreshold();
+  const synthesisMinimum = getChairmanMinimumAdvisorsForSynthesis();
 
   if (successfulCount < minimumSuccessfulAdvisors || chairmanInsufficient) {
     return "failed";
@@ -26,11 +28,11 @@ export function determineCouncilSessionStatus(
     return "failed";
   }
 
-  if (successfulCount >= CHAIRMAN_COMPLETE_ADVISOR_THRESHOLD) {
+  if (successfulCount >= completeThreshold) {
     return "complete";
   }
 
-  if (successfulCount === CHAIRMAN_MINIMUM_ADVISORS_FOR_SYNTHESIS) {
+  if (successfulCount === synthesisMinimum) {
     return "partial";
   }
 

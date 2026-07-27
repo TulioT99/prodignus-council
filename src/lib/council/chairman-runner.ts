@@ -4,11 +4,11 @@ import { defaultChairmanContextBuilder } from "@/lib/council/chairman-context-bu
 import { ChairmanContextBuildError } from "@/lib/council/chairman-context.errors";
 import { buildChairmanPrompts } from "@/lib/council/chairman-prompt";
 import {
-  CHAIRMAN_MINIMUM_ADVISORS_FOR_SYNTHESIS,
   countSuccessfulAdvisors,
+  getChairmanMinimumAdvisorsForSynthesis,
   getMissingAdvisorIds,
 } from "@/lib/council/chairman-policy";
-import { CHAIRMAN_MODEL_ENV_VAR } from "@/lib/council/chairman-execution-config";
+import { resolveChairmanModelEnvVar } from "@/lib/council/chairman-execution-config";
 import {
   flattenDisagreements,
   parseChairmanResponseContent,
@@ -18,24 +18,27 @@ import {
   InvalidModelOutputError,
   toAdvisorSafeMessage,
 } from "@/lib/council/errors";
-import { callOpenRouter, resolveOpenRouterTimeoutMs } from "@/lib/openrouter/client";
+import {
+  callOpenRouter,
+  resolveChairmanOpenRouterTimeoutMs,
+} from "@/lib/openrouter/client";
 import { OpenRouterClientError } from "@/lib/openrouter/types";
-import { councilConfig } from "@/config/council";
+import { getRuntimeConfig } from "@/config/runtime";
 import type {
   AdvisorResult,
   ChairmanResult,
   DecisionContext,
 } from "@/types/council";
 
-const REQUEST_TEMPERATURE = 0.3;
 const UNCONFIGURED_MODEL_LABEL = "Unconfigured model";
 
 function resolveModel(): string {
-  const model = process.env[CHAIRMAN_MODEL_ENV_VAR]?.trim();
+  const modelEnvVar = resolveChairmanModelEnvVar();
+  const model = process.env[modelEnvVar]?.trim();
 
   if (!model) {
     throw new CouncilConfigurationError(
-      `Model environment variable ${CHAIRMAN_MODEL_ENV_VAR} is not configured.`,
+      `Model environment variable ${modelEnvVar} is not configured.`,
     );
   }
 
@@ -184,8 +187,13 @@ export async function runChairman(
   decisionContext: DecisionContext,
   advisors: AdvisorResult[],
 ): Promise<ChairmanResult> {
+  const runtime = getRuntimeConfig();
+  const synthesisMinimum = getChairmanMinimumAdvisorsForSynthesis();
   const successfulAdvisorCount = countSuccessfulAdvisors(advisors);
-  const missingPerspectives = getMissingAdvisorIds(advisors, councilConfig.liveAdvisorIds);
+  const missingPerspectives = getMissingAdvisorIds(
+    advisors,
+    runtime.advisors.enabledAdvisorIds,
+  );
 
   let model: string;
 
@@ -229,7 +237,7 @@ export async function runChairman(
     );
   }
 
-  if (successfulAdvisorCount < CHAIRMAN_MINIMUM_ADVISORS_FOR_SYNTHESIS) {
+  if (successfulAdvisorCount < synthesisMinimum) {
     const failed = createFailedChairmanResult(
       decisionContext.executionId,
       "Insufficient advisor participation for substantive Chairman synthesis.",
@@ -256,8 +264,8 @@ export async function runChairman(
       model,
       systemPrompt,
       userPrompt,
-      temperature: REQUEST_TEMPERATURE,
-      timeoutMs: resolveOpenRouterTimeoutMs(),
+      temperature: runtime.openRouter.defaultTemperature,
+      timeoutMs: resolveChairmanOpenRouterTimeoutMs(),
       executionContext: {
         caller: "chairman",
         executionId: decisionContext.executionId,
@@ -291,7 +299,7 @@ export async function runChairman(
         missingPerspectives:
           missingPerspectives.length > 0 ? missingPerspectives : undefined,
         reducedConfidenceSynthesis:
-          successfulAdvisorCount === CHAIRMAN_MINIMUM_ADVISORS_FOR_SYNTHESIS,
+          successfulAdvisorCount === synthesisMinimum,
       },
     );
   } catch (error) {

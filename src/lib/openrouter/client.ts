@@ -1,6 +1,7 @@
 import "server-only";
 
 import { councilConfig } from "@/config/council";
+import { getRuntimeConfig } from "@/config/runtime";
 import type { OpenRouterExecutionContext } from "@/lib/openrouter/execution-context";
 import {
   buildProviderResponseDiagnosticSnapshot,
@@ -14,15 +15,11 @@ import {
   type OpenRouterCompletionResult,
 } from "@/lib/openrouter/types";
 import {
-  DEFAULT_RETRY_POLICY,
   getRetryDelayMs,
   isRetryEligible,
   shouldRetryAttempt,
 } from "@/lib/retry/policy";
 import type { RetryFailureCategory } from "@/lib/retry/types";
-const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const DEFAULT_TIMEOUT_MS = 90_000;
-const DEFAULT_TEMPERATURE = 0.3;
 
 export type CallOpenRouterOptions = {
   model: string;
@@ -34,19 +31,11 @@ export type CallOpenRouterOptions = {
 };
 
 export function resolveOpenRouterTimeoutMs(): number {
-  const raw = process.env.OPENROUTER_REQUEST_TIMEOUT_MS?.trim();
+  return getRuntimeConfig().timeouts.advisorTimeoutMs;
+}
 
-  if (!raw) {
-    return DEFAULT_TIMEOUT_MS;
-  }
-
-  const parsed = Number.parseInt(raw, 10);
-
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return DEFAULT_TIMEOUT_MS;
-  }
-
-  return parsed;
+export function resolveChairmanOpenRouterTimeoutMs(): number {
+  return getRuntimeConfig().timeouts.chairmanTimeoutMs;
 }
 
 function getApiKey(): string {
@@ -64,8 +53,7 @@ function getApiKey(): string {
 }
 
 function buildRequestHeaders(apiKey: string): Record<string, string> {
-  const referer =
-    process.env.OPENROUTER_HTTP_REFERER?.trim() || "http://localhost:3000";
+  const referer = getRuntimeConfig().openRouter.httpReferer;
 
   return {
     Authorization: `Bearer ${apiKey}`,
@@ -110,7 +98,12 @@ function createClientError(
   message: string,
   category: RetryFailureCategory,
 ): OpenRouterClientError {
-  return new OpenRouterClientError(code, message, isRetryEligible(category));
+  return new OpenRouterClientError(
+    code,
+    message,
+    isRetryEligible(category),
+    category,
+  );
 }
 
 function delay(ms: number): Promise<void> {
@@ -140,8 +133,10 @@ function logInvalidProviderResponse(
     executionContext?: OpenRouterExecutionContext;
   },
 ): void {
-  const snapshot = buildProviderResponseDiagnosticSnapshot(input);
-  logInvalidProviderResponseDiagnostic(snapshot);
+  if (getRuntimeConfig().features.enableProviderDiagnostics) {
+    const snapshot = buildProviderResponseDiagnosticSnapshot(input);
+    logInvalidProviderResponseDiagnostic(snapshot);
+  }
 
   if (isChairmanContext(input.executionContext)) {
     logChairmanLifecycleEvent({
@@ -264,7 +259,7 @@ async function executeOpenRouterRequest(
     model,
     systemPrompt,
     userPrompt,
-    temperature = DEFAULT_TEMPERATURE,
+    temperature = getRuntimeConfig().openRouter.defaultTemperature,
     timeoutMs = resolveOpenRouterTimeoutMs(),
     executionContext,
   } = options;
@@ -292,19 +287,26 @@ async function executeOpenRouterRequest(
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const response = await fetch(OPENROUTER_API_URL, {
+    const openRouter = getRuntimeConfig().openRouter;
+    const requestBody: Record<string, unknown> = {
+      model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature,
+      stream: false,
+      response_format: { type: "json_object" },
+    };
+
+    if (openRouter.maxTokens > 0) {
+      requestBody.max_tokens = openRouter.maxTokens;
+    }
+
+    const response = await fetch(openRouter.apiUrl, {
       method: "POST",
       headers: buildRequestHeaders(apiKey),
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature,
-        stream: false,
-        response_format: { type: "json_object" },
-      }),
+      body: JSON.stringify(requestBody),
       signal: controller.signal,
     });
 
@@ -410,18 +412,7 @@ async function executeOpenRouterRequest(
 function classifyOpenRouterError(
   error: OpenRouterClientError,
 ): RetryFailureCategory {
-  switch (error.code) {
-    case "PROVIDER_TIMEOUT":
-      return "timeout";
-    case "CONFIGURATION_ERROR":
-      return "configuration";
-    case "INVALID_PROVIDER_RESPONSE":
-      return "invalid_response";
-    case "PROVIDER_ERROR":
-      return error.retryable ? "transient" : "permanent";
-    default:
-      return "permanent";
-  }
+  return error.failureCategory;
 }
 
 export async function callOpenRouter(
@@ -430,7 +421,7 @@ export async function callOpenRouter(
   let retryCount = 0;
   let lastError: OpenRouterClientError | undefined;
   const { executionContext } = options;
-  const maxAttempts = DEFAULT_RETRY_POLICY.maxAttempts;
+  const maxAttempts = getRuntimeConfig().retry.maxAttempts;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     try {

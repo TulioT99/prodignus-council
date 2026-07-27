@@ -1,14 +1,16 @@
 import "server-only";
 
+import { getRuntimeConfig } from "@/config/runtime";
 import {
-  ADVISOR_EXECUTION_ORDER,
   getAdvisorExecutionConfig,
+  getAdvisorExecutionOrder,
 } from "@/lib/council/advisor-execution-config";
 import {
   createUnexpectedAdvisorFailureResult,
   runAdvisor,
 } from "@/lib/council/advisor-runner";
 import { runChairman } from "@/lib/council/chairman-runner";
+import { mapWithConcurrency } from "@/lib/council/concurrency";
 import { determineCouncilSessionStatus } from "@/lib/council/council-status";
 import {
   attachEvidenceToDecisionContext,
@@ -16,7 +18,6 @@ import {
   recordDecisionContextIntegrity,
 } from "@/lib/council/decision-context";
 import { retrieveEvidenceForCouncil } from "@/lib/pkos/context-retrieval-engine";
-import { councilConfig } from "@/config/council";
 import { getAdvisorPersonaById } from "@/data/advisor-personas";
 import type { AdvisorResult, CouncilResult, Decision } from "@/types/council";
 
@@ -56,7 +57,9 @@ function resolveSettledAdvisorResult(
   );
 }
 
-export async function runCouncil(decision: Decision): Promise<CouncilResult> {
+async function runCouncilSession(decision: Decision): Promise<CouncilResult> {
+  const runtime = getRuntimeConfig();
+  const advisorOrder = getAdvisorExecutionOrder();
   const councilStartedAt = Date.now();
   const baseDecisionContext = createDecisionContext(decision);
   const pkosRetrieval = retrieveEvidenceForCouncil(baseDecisionContext);
@@ -66,18 +69,18 @@ export async function runCouncil(decision: Decision): Promise<CouncilResult> {
   );
   const integrity = recordDecisionContextIntegrity(
     decisionContext,
-    ADVISOR_EXECUTION_ORDER,
+    advisorOrder,
   );
 
   const advisorStageStartedAt = Date.now();
-  const settledResults = await Promise.allSettled(
-    ADVISOR_EXECUTION_ORDER.map((advisorId) =>
-      resolveAdvisorResult(decisionContext, advisorId),
-    ),
+  const settledResults = await mapWithConcurrency(
+    advisorOrder,
+    runtime.advisors.maxConcurrency,
+    (advisorId) => resolveAdvisorResult(decisionContext, advisorId),
   );
   const advisorStageDurationMs = Date.now() - advisorStageStartedAt;
 
-  const advisorResults = ADVISOR_EXECUTION_ORDER.map((advisorId, index) =>
+  const advisorResults = advisorOrder.map((advisorId, index) =>
     resolveSettledAdvisorResult(
       settledResults[index],
       advisorId,
@@ -86,7 +89,7 @@ export async function runCouncil(decision: Decision): Promise<CouncilResult> {
   );
 
   const chairmanStartedAt = Date.now();
-  const chairman = councilConfig.chairmanEnabled
+  const chairman = runtime.chairman.enabled
     ? await runChairman(decisionContext, advisorResults)
     : undefined;
   const chairmanDurationMs = chairman ? Date.now() - chairmanStartedAt : 0;
@@ -99,7 +102,7 @@ export async function runCouncil(decision: Decision): Promise<CouncilResult> {
     status: determineCouncilSessionStatus(
       advisorResults,
       chairman,
-      councilConfig.minimumSuccessfulAdvisors,
+      runtime.chairman.minimumSuccessfulAdvisors,
     ),
     advisors: advisorResults,
     chairman,
@@ -108,4 +111,33 @@ export async function runCouncil(decision: Decision): Promise<CouncilResult> {
     totalDurationMs,
     pkosRetrieval,
   };
+}
+
+export async function runCouncil(decision: Decision): Promise<CouncilResult> {
+  const overallTimeoutMs = getRuntimeConfig().timeouts.overallCouncilTimeoutMs;
+
+  if (overallTimeoutMs <= 0) {
+    return runCouncilSession(decision);
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      runCouncilSession(decision),
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(
+            new Error(
+              `Council session exceeded overall timeout of ${overallTimeoutMs}ms.`,
+            ),
+          );
+        }, overallTimeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+  }
 }

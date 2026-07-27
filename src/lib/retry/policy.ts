@@ -1,3 +1,5 @@
+import { DEFAULT_RUNTIME_CONFIG } from "@/config/defaults";
+import { getRuntimeConfig } from "@/config/runtime";
 import type {
   RetryDecisionInput,
   RetryFailureCategory,
@@ -5,25 +7,27 @@ import type {
 } from "@/lib/retry/types";
 
 /**
- * Default bounded retry budget.
- * Preserves prior adapter behavior: 2 retries after the initial attempt ⇒ 3 total attempts.
+ * Default bounded retry budget (derived from DEFAULT_RUNTIME_CONFIG).
+ * Prefer getRuntimeConfig().retry at runtime; this export remains for tests/docs.
  */
 export const DEFAULT_RETRY_POLICY: RetryPolicyDefaults = {
-  maxAttempts: 3,
+  maxAttempts: DEFAULT_RUNTIME_CONFIG.retry.maxAttempts,
 };
 
 /** Explicit alias: retries after the first attempt under the default policy. */
 export const DEFAULT_MAX_RETRIES = DEFAULT_RETRY_POLICY.maxAttempts - 1;
 
-const RETRYABLE_CATEGORIES: ReadonlySet<RetryFailureCategory> = new Set([
-  "timeout",
-  "rate_limited",
-  "transient",
-  "invalid_response",
-]);
+function resolveRetryConfig() {
+  return getRuntimeConfig().retry;
+}
 
 export function isRetryEligible(category: RetryFailureCategory): boolean {
-  return RETRYABLE_CATEGORIES.has(category);
+  const retry = resolveRetryConfig();
+  if (!retry.enabled) {
+    return false;
+  }
+
+  return retry.retryableCategories.includes(category);
 }
 
 /**
@@ -32,7 +36,12 @@ export function isRetryEligible(category: RetryFailureCategory): boolean {
  * budget would be exceeded.
  */
 export function shouldRetryAttempt(input: RetryDecisionInput): boolean {
-  const maxAttempts = input.maxAttempts ?? DEFAULT_RETRY_POLICY.maxAttempts;
+  const retry = resolveRetryConfig();
+  const maxAttempts = input.maxAttempts ?? retry.maxAttempts;
+
+  if (!retry.enabled) {
+    return false;
+  }
 
   if (maxAttempts < 1) {
     return false;
@@ -46,17 +55,25 @@ export function shouldRetryAttempt(input: RetryDecisionInput): boolean {
 }
 
 /**
- * Delay before the next attempt. Currently immediate (0 ms).
- * Backoff externalization remains WP-07 (NFR-CFG-01); this hook keeps delay
- * decisions in the policy module rather than the provider adapter.
+ * Delay before the next attempt.
+ * Uses configured base delay, exponential multiplier, and max delay.
+ * Default baseDelayMs = 0 preserves historical immediate retries (AR-002 surface).
+ * Category is accepted so rate_limited can diverge later without remapping (AR-003).
  */
 export function getRetryDelayMs(
   attemptIndex: number,
   category: RetryFailureCategory,
 ): number {
-  void attemptIndex;
   void category;
-  return 0;
+  const retry = resolveRetryConfig();
+
+  if (retry.baseDelayMs <= 0) {
+    return 0;
+  }
+
+  const factor = retry.backoffMultiplier ** Math.max(0, attemptIndex);
+  const computed = Math.floor(retry.baseDelayMs * factor);
+  return Math.min(computed, retry.maxDelayMs);
 }
 
 export function resolveMaxAttempts(override?: number): number {
@@ -68,5 +85,5 @@ export function resolveMaxAttempts(override?: number): number {
     return Math.floor(override);
   }
 
-  return DEFAULT_RETRY_POLICY.maxAttempts;
+  return resolveRetryConfig().maxAttempts;
 }

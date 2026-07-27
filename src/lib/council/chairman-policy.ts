@@ -1,10 +1,31 @@
 import "server-only";
 
-/** Minimum successful advisors required before Chairman may synthesize. */
-export const CHAIRMAN_MINIMUM_ADVISORS_FOR_SYNTHESIS = 3;
+import { DEFAULT_RUNTIME_CONFIG } from "@/config/defaults";
+import { getRuntimeConfig } from "@/config/runtime";
 
-/** Successful advisors at or above this count allow a complete council session. */
-export const CHAIRMAN_COMPLETE_ADVISOR_THRESHOLD = 4;
+/**
+ * Default minimum successful advisors.
+ * Derived from DEFAULT_RUNTIME_CONFIG — prefer getters at runtime.
+ */
+export const CHAIRMAN_MINIMUM_ADVISORS_FOR_SYNTHESIS =
+  DEFAULT_RUNTIME_CONFIG.chairman.minimumSuccessfulAdvisors;
+
+/**
+ * Default complete-session threshold.
+ * Derived from DEFAULT_RUNTIME_CONFIG — prefer getters at runtime.
+ */
+export const CHAIRMAN_COMPLETE_ADVISOR_THRESHOLD =
+  DEFAULT_RUNTIME_CONFIG.chairman.completeAdvisorThreshold;
+
+/** Runtime minimum successful advisors required before Chairman may synthesize. */
+export function getChairmanMinimumAdvisorsForSynthesis(): number {
+  return getRuntimeConfig().chairman.minimumSuccessfulAdvisors;
+}
+
+/** Runtime successful-advisor count at or above which a session may be complete. */
+export function getChairmanCompleteAdvisorThreshold(): number {
+  return getRuntimeConfig().chairman.completeAdvisorThreshold;
+}
 
 export function countSuccessfulAdvisors(
   advisors: ReadonlyArray<{ status: string }>,
