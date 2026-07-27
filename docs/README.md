@@ -11,6 +11,7 @@ All engineering documentation in this repository follows the [OPS-0001 — Engin
 | Engineering Specifications | `docs/eng/` | `ENG-NNNN-*` | Implementation contracts, interfaces, and invariants |
 | Architecture Readiness Reviews | `docs/arr/` | `ARR-NNNN-*` | Pre-implementation governance checkpoints |
 | Architecture Assessments | `docs/assessments/` | Descriptive filename | Historical read-only architecture baselines |
+| Architecture (informative) | `docs/architecture/` | Descriptive filename | Living architecture descriptions (non-ADR) |
 | Implementation Plans | `docs/imp/` | `IMP-NNNN-*` | Execution strategy and validation gates |
 | Architecture Implementation Reviews | `docs/air/` | `AIR-NNNN-*` | Post-implementation architectural compliance assessment |
 | Implementation Completion Reports | `docs/icr/` | `ICR-NNNN-*` | Implementation delivery certification |
@@ -48,6 +49,12 @@ All engineering documentation in this repository follows the [OPS-0001 — Engin
 | Document | Title | Status |
 | -------- | ----- | ------ |
 | [decision-council-architecture-assessment.md](assessments/decision-council-architecture-assessment.md) | Decision Council Architecture Assessment | Historical (baseline `cc90061`) |
+
+## Architecture (informative)
+
+| Document | Title | Status |
+| -------- | ----- | ------ |
+| [RUNTIME_CONFIGURATION.md](architecture/RUNTIME_CONFIGURATION.md) | Runtime Configuration Architecture (WP-07 Configuration Slice) | Informative |
 
 ## Implementation Plans
 
