@@ -24,6 +24,7 @@ import {
 } from "@/lib/openrouter/client";
 import { OpenRouterClientError } from "@/lib/openrouter/types";
 import { getRuntimeConfig } from "@/config/runtime";
+import type { ConsensusPackage } from "@/lib/council/consensus/types";
 import type {
   AdvisorResult,
   ChairmanResult,
@@ -31,6 +32,10 @@ import type {
 } from "@/types/council";
 
 const UNCONFIGURED_MODEL_LABEL = "Unconfigured model";
+
+export type RunChairmanOptions = {
+  readonly consensus?: ConsensusPackage;
+};
 
 function resolveModel(): string {
   const modelEnvVar = resolveChairmanModelEnvVar();
@@ -186,6 +191,7 @@ function logChairmanExecution(entry: {
 export async function runChairman(
   decisionContext: DecisionContext,
   advisors: AdvisorResult[],
+  options: RunChairmanOptions = {},
 ): Promise<ChairmanResult> {
   const runtime = getRuntimeConfig();
   const synthesisMinimum = getChairmanMinimumAdvisorsForSynthesis();
@@ -224,11 +230,15 @@ export async function runChairman(
     const chairmanContext = defaultChairmanContextBuilder.build({
       decisionContext,
       advisors,
+      consensus: options.consensus,
     });
     ({ systemPrompt, userPrompt } = buildChairmanPrompts(chairmanContext));
   } catch (error) {
     if (error instanceof ChairmanContextBuildError) {
-      return createFailedChairmanResult(decisionContext.executionId, error.safeMessage);
+      return createFailedChairmanResult(
+        decisionContext.executionId,
+        error.safeMessage,
+      );
     }
 
     return createFailedChairmanResult(
@@ -298,8 +308,7 @@ export async function runChairman(
       {
         missingPerspectives:
           missingPerspectives.length > 0 ? missingPerspectives : undefined,
-        reducedConfidenceSynthesis:
-          successfulAdvisorCount === synthesisMinimum,
+        reducedConfidenceSynthesis: successfulAdvisorCount === synthesisMinimum,
       },
     );
   } catch (error) {
@@ -333,8 +342,12 @@ export async function runChairman(
       successfulAdvisorCount,
     });
 
-    return createFailedChairmanResult(decisionContext.executionId, safeMessage, {
-      model,
-    });
+    return createFailedChairmanResult(
+      decisionContext.executionId,
+      safeMessage,
+      {
+        model,
+      },
+    );
   }
 }

@@ -10,6 +10,7 @@ import {
   runAdvisor,
 } from "@/lib/council/advisor-runner";
 import { runChairman } from "@/lib/council/chairman-runner";
+import { buildConsensusPackage } from "@/lib/council/consensus/engine";
 import { mapWithConcurrency } from "@/lib/council/concurrency";
 import { determineCouncilSessionStatus } from "@/lib/council/council-status";
 import {
@@ -95,8 +96,7 @@ async function runCouncilSession(
     ),
   );
 
-  // Validation gate for future consensus (WP-04). Side-effect free; keeps
-  // Chairman path unchanged while proving validated opinions are selectable.
+  // Validation gate (WP-03) — consensus consumes the same eligibility surface.
   const validatedOpinions = selectValidatedAdvisorOpinions(advisorResults);
   if (runtime.features.enableDetailedTraces) {
     console.info(
@@ -104,13 +104,22 @@ async function runCouncilSession(
     );
   }
 
+  const consensusStartedAt = Date.now();
+  const consensus = buildConsensusPackage({
+    executionId: decisionContext.executionId,
+    advisors: advisorResults,
+    expectedAdvisorIds: runtime.advisors.enabledAdvisorIds,
+    minimumEligibleAdvisors: runtime.chairman.minimumSuccessfulAdvisors,
+  });
+  const consensusDurationMs = Date.now() - consensusStartedAt;
+
   if (signal?.aborted) {
     throw new Error("Council session was cancelled.");
   }
 
   const chairmanStartedAt = Date.now();
   const chairman = runtime.chairman.enabled
-    ? await runChairman(decisionContext, advisorResults)
+    ? await runChairman(decisionContext, advisorResults, { consensus })
     : undefined;
   const chairmanDurationMs = chairman ? Date.now() - chairmanStartedAt : 0;
   const totalDurationMs = Date.now() - councilStartedAt;
@@ -125,8 +134,10 @@ async function runCouncilSession(
       runtime.chairman.minimumSuccessfulAdvisors,
     ),
     advisors: advisorResults,
+    consensus,
     chairman,
     advisorStageDurationMs,
+    consensusDurationMs,
     chairmanDurationMs,
     totalDurationMs,
     pkosRetrieval,

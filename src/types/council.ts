@@ -1,3 +1,4 @@
+import type { ConsensusPackage } from "@/lib/council/consensus/types";
 import type { EvidencePackage } from "@/types/pkos";
 
 export type ThinkingLens =
@@ -19,11 +20,7 @@ export type CouncilDecision =
   | "do_not_proceed"
   | "insufficient_information";
 
-export type DecisionStatus =
-  | "draft"
-  | "under_review"
-  | "decided"
-  | "archived";
+export type DecisionStatus = "draft" | "under_review" | "decided" | "archived";
 
 export type CouncilSessionStatus = "complete" | "partial" | "failed";
 
@@ -354,9 +351,13 @@ export type CouncilResult = {
   integrity: CouncilIntegrityDiagnostics;
   status: CouncilSessionStatus;
   advisors: AdvisorResult[];
+  /** Deterministic consensus package (ENG-0006 / WP-04). */
+  consensus?: ConsensusPackage;
   chairman?: ChairmanResult;
   advisorStageDurationMs: number;
   chairmanDurationMs: number;
+  /** Consensus stage wall time (ms); 0 when consensus was skipped. */
+  consensusDurationMs?: number;
   totalDurationMs: number;
   pkosRetrieval?: EvidencePackage;
 };

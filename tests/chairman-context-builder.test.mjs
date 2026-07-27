@@ -1,9 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  DefaultChairmanContextBuilder,
-} from "../src/lib/council/chairman-context-builder.ts";
+import { DefaultChairmanContextBuilder } from "../src/lib/council/chairman-context-builder.ts";
 import { ChairmanContextBuildError } from "../src/lib/council/chairman-context.errors.ts";
 import { createDecisionContext } from "../src/lib/council/decision-context.ts";
 
@@ -40,7 +38,9 @@ const deliveryEngineeringAdvisorResult = {
   status: "success",
   executionId: "exec-adv-004",
   summary: "Phased rollout reduces delivery risk.",
-  analysis: [{ title: "Operational impact", description: "Requires monitoring." }],
+  analysis: [
+    { title: "Operational impact", description: "Requires monitoring." },
+  ],
   assumptions: ["Team capacity is stable"],
   risks: ["Integration complexity"],
   recommendation: "proceed_with_conditions",
@@ -107,38 +107,72 @@ const failedAdvisorResult = {
   errorMessage: "The model provider did not respond within the allowed time.",
 };
 
-function createInput(advisors, options = {}) {
+function createInput(advisors, options = {}, consensus) {
   return {
     decisionContext: createDecisionContext(decision, {
       executionId: "EXEC-SHARED-001",
-      attachments: [{ id: "att-1", name: "policy.pdf", mimeType: "application/pdf" }],
+      attachments: [
+        { id: "att-1", name: "policy.pdf", mimeType: "application/pdf" },
+      ],
       ...options,
     }),
     advisors,
+    ...(consensus ? { consensus } : {}),
   };
 }
 
 test("TC-001: builds valid Chairman context", () => {
   const builder = new DefaultChairmanContextBuilder(fixedClock);
-  const input = createInput([contrarianAdvisorResult, deliveryEngineeringAdvisorResult]);
+  const input = createInput([
+    contrarianAdvisorResult,
+    deliveryEngineeringAdvisorResult,
+  ]);
   const context = builder.build(input);
 
   assert.equal(context.schemaVersion, "1.0");
   assert.equal(context.request.question, decision.question);
   assert.equal(context.advisors.length, 2);
   assert.equal(context.metadata.advisorCount, 2);
+  // Without a published consensus package, CI remains an empty stub (backward compatible).
   assert.deepEqual(context.collectiveIntelligence, {});
+});
+
+test("TC-001b: embeds published consensus package into collectiveIntelligence", async () => {
+  const { buildConsensusPackage } =
+    await import("../src/lib/council/consensus/engine.ts");
+  const builder = new DefaultChairmanContextBuilder(fixedClock);
+  const advisors = [contrarianAdvisorResult, deliveryEngineeringAdvisorResult];
+  const consensus = buildConsensusPackage({
+    executionId: "EXEC-SHARED-001",
+    advisors,
+    expectedAdvisorIds: ["ADV-001", "ADV-004"],
+    minimumEligibleAdvisors: 2,
+  });
+  const context = builder.build(createInput(advisors, {}, consensus));
+
+  assert.equal(context.collectiveIntelligence.consensus, consensus);
+  assert.equal(
+    context.collectiveIntelligence.extensions.consensusStatus,
+    consensus.status,
+  );
+  assert.ok(Array.isArray(context.collectiveIntelligence.conflicts));
 });
 
 test("TC-002: preserves complete AdvisorResult", () => {
   const builder = new DefaultChairmanContextBuilder(fixedClock);
-  const context = builder.build(createInput([deliveryEngineeringAdvisorResult]));
+  const context = builder.build(
+    createInput([deliveryEngineeringAdvisorResult]),
+  );
   const result = context.advisors[0].result;
 
   assert.equal(result.summary, deliveryEngineeringAdvisorResult.summary);
-  assert.deepEqual(result.technicalAlternatives, ["Batch import instead of live upload"]);
+  assert.deepEqual(result.technicalAlternatives, [
+    "Batch import instead of live upload",
+  ]);
   assert.deepEqual(result.engineeringConcerns, ["Service coupling"]);
-  assert.deepEqual(result.keyArguments, ["Incremental delivery de-risks rollout"]);
+  assert.deepEqual(result.keyArguments, [
+    "Incremental delivery de-risks rollout",
+  ]);
 });
 
 test("TC-003: preserves unknown future fields", () => {
@@ -158,7 +192,11 @@ test("TC-003: preserves unknown future fields", () => {
 test("TC-004: preserves advisor ordering", () => {
   const builder = new DefaultChairmanContextBuilder(fixedClock);
   const context = builder.build(
-    createInput([contrarianAdvisorResult, deliveryEngineeringAdvisorResult, failedAdvisorResult]),
+    createInput([
+      contrarianAdvisorResult,
+      deliveryEngineeringAdvisorResult,
+      failedAdvisorResult,
+    ]),
   );
 
   assert.deepEqual(
@@ -218,7 +256,8 @@ test("TC-009: rejects missing advisor identity", () => {
   assert.throws(
     () => builder.build(createInput([advisorWithoutId])),
     (error) =>
-      error instanceof ChairmanContextBuildError && error.code === "MISSING_ADVISOR_ID",
+      error instanceof ChairmanContextBuildError &&
+      error.code === "MISSING_ADVISOR_ID",
   );
 });
 
@@ -260,7 +299,11 @@ test("TC-017: build failure exposes safe message", () => {
   const builder = new DefaultChairmanContextBuilder(fixedClock);
 
   assert.throws(
-    () => builder.build({ decisionContext: createDecisionContext({ ...decision, question: "  " }), advisors: [] }),
+    () =>
+      builder.build({
+        decisionContext: createDecisionContext({ ...decision, question: "  " }),
+        advisors: [],
+      }),
     (error) =>
       error instanceof ChairmanContextBuildError &&
       error.code === "MISSING_QUESTION" &&

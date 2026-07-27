@@ -4,74 +4,75 @@ All engineering documentation in this repository follows the [OPS-0001 — Engin
 
 ## Documentation Hierarchy
 
-| Type | Location | Identifier pattern | Purpose |
-| ---- | -------- | ------------------ | ------- |
-| Operations | `docs/ops/` | `OPS-NNNN-*` | Engineering workflow, standards, and operating procedures |
-| Architecture Decision Records | `docs/adr/` | `ADR-NNNN-*` | Architectural decisions and rationale |
-| Engineering Specifications | `docs/eng/` | `ENG-NNNN-*` | Implementation contracts, interfaces, and invariants |
-| Architecture Readiness Reviews | `docs/arr/` | `ARR-NNNN-*` | Pre-implementation governance checkpoints |
-| Architecture Assessments | `docs/assessments/` | Descriptive filename | Historical read-only architecture baselines |
-| Architecture (informative) | `docs/architecture/` | Descriptive filename | Living architecture descriptions (non-ADR) |
-| Implementation Plans | `docs/imp/` | `IMP-NNNN-*` | Execution strategy and validation gates |
-| Architecture Implementation Reviews | `docs/air/` | `AIR-NNNN-*` | Post-implementation architectural compliance assessment |
-| Implementation Completion Reports | `docs/icr/` | `ICR-NNNN-*` | Implementation delivery certification |
+| Type                                | Location             | Identifier pattern   | Purpose                                                   |
+| ----------------------------------- | -------------------- | -------------------- | --------------------------------------------------------- |
+| Operations                          | `docs/ops/`          | `OPS-NNNN-*`         | Engineering workflow, standards, and operating procedures |
+| Architecture Decision Records       | `docs/adr/`          | `ADR-NNNN-*`         | Architectural decisions and rationale                     |
+| Engineering Specifications          | `docs/eng/`          | `ENG-NNNN-*`         | Implementation contracts, interfaces, and invariants      |
+| Architecture Readiness Reviews      | `docs/arr/`          | `ARR-NNNN-*`         | Pre-implementation governance checkpoints                 |
+| Architecture Assessments            | `docs/assessments/`  | Descriptive filename | Historical read-only architecture baselines               |
+| Architecture (informative)          | `docs/architecture/` | Descriptive filename | Living architecture descriptions (non-ADR)                |
+| Implementation Plans                | `docs/imp/`          | `IMP-NNNN-*`         | Execution strategy and validation gates                   |
+| Architecture Implementation Reviews | `docs/air/`          | `AIR-NNNN-*`         | Post-implementation architectural compliance assessment   |
+| Implementation Completion Reports   | `docs/icr/`          | `ICR-NNNN-*`         | Implementation delivery certification                     |
 
 ## Operations
 
-| Document | Title | Status |
-| -------- | ----- | ------ |
+| Document                                                  | Title                         | Status   |
+| --------------------------------------------------------- | ----------------------------- | -------- |
 | [OPS-0001](ops/OPS-0001-engineering-workflow-standard.md) | Engineering Workflow Standard | Approved |
 
 ## Architecture Decision Records
 
-| Document | Title | Status |
-| -------- | ----- | ------ |
-| [ADR-0003](adr/ADR-0003-collective-intelligence-layer.md) | Collective Intelligence Layer | Accepted |
-| [ADR-0005](adr/ADR-0005-decision-council-advisors-v1.md) | Decision Council Advisors v1.0 | Accepted |
+| Document                                                              | Title                                     | Status   |
+| --------------------------------------------------------------------- | ----------------------------------------- | -------- |
+| [ADR-0003](adr/ADR-0003-collective-intelligence-layer.md)             | Collective Intelligence Layer             | Accepted |
+| [ADR-0005](adr/ADR-0005-decision-council-advisors-v1.md)              | Decision Council Advisors v1.0            | Accepted |
 | [ADR-0006](adr/ADR-0006-sprint-1-architecture-validation-strategy.md) | Sprint 1 Architecture Validation Strategy | Accepted |
 
 ## Engineering Specifications
 
-| Document | Title | Status |
-| -------- | ----- | ------ |
+| Document                                                                     | Title                                          | Status                                   |
+| ---------------------------------------------------------------------------- | ---------------------------------------------- | ---------------------------------------- |
 | [ENG-0002](eng/ENG-0002-chairman-context-builder-technical-specification.md) | ChairmanContextBuilder Technical Specification | Approved for Implementation — Revision 1 |
-| [ENG-0003](eng/ENG-0003-sprint-1-execution-architecture.md) | Sprint 1 Execution Architecture | Proposed |
+| [ENG-0003](eng/ENG-0003-sprint-1-execution-architecture.md)                  | Sprint 1 Execution Architecture                | Proposed                                 |
 
 ## Architecture Readiness Reviews
 
-| Document | Title | Outcome |
-| -------- | ----- | ------- |
-| [ARR-0001](arr/ARR-0001-architecture-readiness-review.md) | Architecture Readiness Review (Sprint 6) | PASS WITH RECOMMENDATIONS |
-| [ARR-0002](arr/ARR-0002-sprint-1-architecture-readiness-review.md) | Sprint 1 Architecture Readiness Review | PASS WITH OBSERVATIONS |
+| Document                                                           | Title                                    | Outcome                   |
+| ------------------------------------------------------------------ | ---------------------------------------- | ------------------------- |
+| [ARR-0001](arr/ARR-0001-architecture-readiness-review.md)          | Architecture Readiness Review (Sprint 6) | PASS WITH RECOMMENDATIONS |
+| [ARR-0002](arr/ARR-0002-sprint-1-architecture-readiness-review.md) | Sprint 1 Architecture Readiness Review   | PASS WITH OBSERVATIONS    |
 
 ## Architecture Assessments
 
-| Document | Title | Status |
-| -------- | ----- | ------ |
+| Document                                                                                               | Title                                    | Status                          |
+| ------------------------------------------------------------------------------------------------------ | ---------------------------------------- | ------------------------------- |
 | [decision-council-architecture-assessment.md](assessments/decision-council-architecture-assessment.md) | Decision Council Architecture Assessment | Historical (baseline `cc90061`) |
 
 ## Architecture (informative)
 
-| Document | Title | Status |
-| -------- | ----- | ------ |
+| Document                                                          | Title                                                          | Status      |
+| ----------------------------------------------------------------- | -------------------------------------------------------------- | ----------- |
 | [RUNTIME_CONFIGURATION.md](architecture/RUNTIME_CONFIGURATION.md) | Runtime Configuration Architecture (WP-07 Configuration Slice) | Informative |
+| [CONSENSUS_ENGINE.md](architecture/CONSENSUS_ENGINE.md)           | Consensus Engine Implementation Notes (WP-04)                  | Informative |
 
 ## Implementation Plans
 
-| Document | Title | Status |
-| -------- | ----- | ------ |
+| Document                                                                 | Title                                      | Status                      |
+| ------------------------------------------------------------------------ | ------------------------------------------ | --------------------------- |
 | [IMP-0002](imp/IMP-0002-chairman-context-builder-implementation-plan.md) | ChairmanContextBuilder Implementation Plan | Approved for Implementation |
 
 ## Architecture Implementation Reviews
 
-| Document | Title | Outcome |
-| -------- | ----- | ------- |
+| Document                                                                                | Title                                                     | Outcome  |
+| --------------------------------------------------------------------------------------- | --------------------------------------------------------- | -------- |
 | [AIR-0001](air/AIR-0001-chairman-context-builder-architecture-implementation-review.md) | ChairmanContextBuilder Architecture Implementation Review | APPROVED |
 
 ## Implementation Completion Reports
 
-| Document | Title | Status |
-| -------- | ----- | ------ |
+| Document                                                                              | Title                                                   | Status    |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------- | --------- |
 | [ICR-0002](icr/ICR-0002-chairman-context-builder-implementation-completion-report.md) | ChairmanContextBuilder Implementation Completion Report | Published |
 
 ## Sprint 6 Traceability Chain

@@ -100,9 +100,31 @@ export class DefaultChairmanContextBuilder implements ChairmanContextBuilder {
   build(input: ChairmanContextBuildInput): ChairmanContext {
     validateInput(input);
 
-    const { decisionContext, advisors } = input;
+    const { decisionContext, advisors, consensus } = input;
     const request = freezeRequestContext(decisionContext);
-    const mappedAdvisors = Object.freeze(advisors.map((advisor) => mapAdvisor(advisor)));
+    const mappedAdvisors = Object.freeze(
+      advisors.map((advisor) => mapAdvisor(advisor)),
+    );
+
+    const collectiveIntelligence = consensus
+      ? Object.freeze({
+          consensus,
+          conflicts: consensus.disagreementMap,
+          evidence: consensus.evidenceCoverage,
+          confidence: consensus.confidence,
+          openQuestions: consensus.openQuestions,
+          extensions: Object.freeze({
+            agreementMap: consensus.agreementMap,
+            minorityPositions: consensus.minorityPositions,
+            unresolvedConflicts: consensus.unresolvedConflicts,
+            participatingAdvisors: consensus.participatingAdvisors,
+            excludedAdvisors: consensus.excludedAdvisors,
+            consensusRationale: consensus.consensusRationale,
+            consensusStatus: consensus.status,
+            consensusMetadata: consensus.metadata,
+          }),
+        })
+      : Object.freeze({});
 
     return Object.freeze({
       schemaVersion: "1.0",
@@ -117,9 +139,10 @@ export class DefaultChairmanContextBuilder implements ChairmanContextBuilder {
         pipelineVersion: councilConfig.version,
         language: decisionContext.language,
       }),
-      collectiveIntelligence: Object.freeze({}),
+      collectiveIntelligence,
     });
   }
 }
 
-export const defaultChairmanContextBuilder = new DefaultChairmanContextBuilder();
+export const defaultChairmanContextBuilder =
+  new DefaultChairmanContextBuilder();

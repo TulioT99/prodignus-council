@@ -212,6 +212,86 @@ function buildPartialFailureGuidance(
   return `This council should not produce a substantive final decision because fewer than ${synthesisMinimum} advisors succeeded.`;
 }
 
+function formatConsensusPackageSection(
+  chairmanContext: ChairmanContext,
+): string {
+  const package_ = chairmanContext.collectiveIntelligence.consensus;
+
+  if (!package_) {
+    return `=== SYSTEM BOUNDARY: CONSENSUS PACKAGE ===
+
+(No consensus package published for this session.)`;
+  }
+
+  return `=== SYSTEM BOUNDARY: CONSENSUS PACKAGE ===
+
+This structured package is the authoritative agreement/disagreement landscape.
+Use it as the primary structural input; do not rediscover the entire landscape from raw advisor prose alone.
+
+Status: ${package_.status}
+Eligible advisors: ${package_.metadata.eligibleCount}
+Excluded advisors: ${package_.metadata.excludedCount}
+Dominant recommendation: ${package_.metadata.dominantRecommendation ?? "(none)"}
+Consensus confidence (0-1, structural): ${package_.confidence.overall}
+Advisor confidence mean (preserved separately): ${package_.confidence.advisorConfidenceMean}
+Degradation flags: ${
+    package_.metadata.degradationFlags.length > 0
+      ? package_.metadata.degradationFlags.join(", ")
+      : "(none)"
+  }
+
+Participating advisors:
+${
+  package_.participatingAdvisors.length > 0
+    ? package_.participatingAdvisors
+        .map(
+          (entry) =>
+            `- ${entry.advisorId} (${entry.displayName}): ${entry.recommendation} @ advisorConfidence=${entry.advisorConfidence}`,
+        )
+        .join("\n")
+    : "(none)"
+}
+
+Excluded advisors (operational/validation only — not semantic votes):
+${
+  package_.excludedAdvisors.length > 0
+    ? package_.excludedAdvisors
+        .map(
+          (entry) =>
+            `- ${entry.advisorId} (${entry.displayName}): ${entry.reason}${
+              entry.detail ? ` — ${entry.detail}` : ""
+            }`,
+        )
+        .join("\n")
+    : "(none)"
+}
+
+Agreement map:
+${JSON.stringify(package_.agreementMap, null, 2)}
+
+Disagreement map:
+${JSON.stringify(package_.disagreementMap, null, 2)}
+
+Minority positions:
+${JSON.stringify(package_.minorityPositions, null, 2)}
+
+Unresolved conflicts:
+${JSON.stringify(package_.unresolvedConflicts, null, 2)}
+
+Evidence coverage:
+${JSON.stringify(package_.evidenceCoverage, null, 2)}
+
+Open questions:
+${
+  package_.openQuestions.length > 0
+    ? package_.openQuestions.map((q) => `- ${q}`).join("\n")
+    : "(none)"
+}
+
+Consensus rationale (structural, not executive recommendation):
+${package_.consensusRationale.map((line) => `- ${line}`).join("\n")}`;
+}
+
 export function buildChairmanPrompts(chairmanContext: ChairmanContext): {
   systemPrompt: string;
   userPrompt: string;
@@ -232,12 +312,16 @@ export function buildChairmanPrompts(chairmanContext: ChairmanContext): {
 
   const successfulSection =
     successfulAdvisors.length > 0
-      ? successfulAdvisors.map((entry) => formatSuccessfulAdvisor(entry.result)).join("\n\n")
+      ? successfulAdvisors
+          .map((entry) => formatSuccessfulAdvisor(entry.result))
+          .join("\n\n")
       : "(No advisors completed successfully.)";
 
   const failedSection =
     failedAdvisors.length > 0
-      ? failedAdvisors.map((entry) => formatFailedAdvisor(entry.result)).join("\n\n")
+      ? failedAdvisors
+          .map((entry) => formatFailedAdvisor(entry.result))
+          .join("\n\n")
       : "(No advisor failures.)";
 
   const { request } = chairmanContext;
@@ -250,11 +334,11 @@ You are NOT a sixth domain advisor.
 Your responsibilities:
 
 - Evaluate the original decision question using the normalized decision context below.
+- Treat the Consensus Package (when present) as the authoritative structured representation of agreement, disagreement, minority positions, unresolved conflicts, evidence coverage, and consensus-level confidence.
 - Consider every successful advisor output as evidence, not as a vote.
 - Recognize failed or unavailable advisors and disclose missing perspectives.
-- Identify material consensus and substantive disagreement.
 - Weigh reasoning quality, risk exposure, and decision context — not vote counts or averaged confidence scores.
-- Preserve the strongest minority or Contrarian argument when it materially affects the decision.
+- Preserve the strongest minority or Contrarian argument when it materially affects the decision — especially positions retained in the Consensus Package.
 - Make a clear recommendation rather than merely summarizing advisor text.
 - Convert uncertainty into conditions, evidence requests, bounded experiments, or an explicit deferral.
 - Identify immediate next actions and evidence that would reverse your recommendation.
@@ -272,6 +356,8 @@ Prohibitions:
 - Do not claim unanimity when disagreement exists.
 - Do not suppress the Contrarian merely because it is a minority.
 - Do not average confidence scores mechanically.
+- Do not treat consensus confidence as a substitute for executive judgment.
+- Do not invent participation, agreement, or evidence that the Consensus Package does not support.
 - Do not return vague language such as "consider both options" without choosing a path.
 - Do not repeat entire advisor outputs verbatim.
 - Do not output anything outside the required JSON schema.
@@ -293,6 +379,8 @@ ${formatAttachments(chairmanContext)}
 Status: ${request.status}
 
 ${formatCanonicalEvidenceSection(request.pkosEvidence)}
+
+${formatConsensusPackageSection(chairmanContext)}
 
 === SYSTEM BOUNDARY: ADVISOR EVIDENCE ===
 
@@ -317,10 +405,10 @@ ${CHAIRMAN_RESPONSE_SCHEMA}
 Requirements:
 
 - decisionStatement must state the council decision explicitly and concisely.
-- finalRecommendation must explain why the chosen path follows from advisor evidence.
+- finalRecommendation must explain why the chosen path follows from advisor evidence and the Consensus Package.
 - recommendationType must reflect your synthesized decision path.
-- consensus and disagreements must reflect substantive alignment or conflict, not vote counts.
-- Preserve a meaningful Contrarian or minority view in minorityView when applicable.
+- consensus and disagreements must reflect substantive alignment or conflict from the Consensus Package where present, not vote counts.
+- Preserve a meaningful Contrarian or minority view in minorityView when applicable (prefer package minority lineage).
 - nextActions must contain at least one concrete action with sequence and expectedOutcome.
 - reversalCriteria must contain at least one item describing evidence that would reverse the recommendation.
 - minimumAdditionalEvidence should identify missing evidence when uncertainty remains.
