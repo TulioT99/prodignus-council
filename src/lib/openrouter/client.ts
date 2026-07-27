@@ -13,11 +13,16 @@ import {
   type OpenRouterChatCompletionResponse,
   type OpenRouterCompletionResult,
 } from "@/lib/openrouter/types";
-
+import {
+  DEFAULT_RETRY_POLICY,
+  getRetryDelayMs,
+  isRetryEligible,
+  shouldRetryAttempt,
+} from "@/lib/retry/policy";
+import type { RetryFailureCategory } from "@/lib/retry/types";
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_TIMEOUT_MS = 90_000;
 const DEFAULT_TEMPERATURE = 0.3;
-const MAX_RETRIES = 2;
 
 export type CallOpenRouterOptions = {
   model: string;
@@ -48,10 +53,10 @@ function getApiKey(): string {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
 
   if (!apiKey) {
-    throw new OpenRouterClientError(
+    throw createClientError(
       "CONFIGURATION_ERROR",
       "OpenRouter API key is not configured.",
-      false,
+      "configuration",
     );
   }
 
@@ -70,12 +75,52 @@ function buildRequestHeaders(apiKey: string): Record<string, string> {
   };
 }
 
+/**
+ * Client-visible provider error text must never include raw provider body,
+ * auth material, or diagnostic payloads (AC-S-02). Diagnostics remain in
+ * server-side logging only.
+ */
 function sanitizeProviderMessage(message: string | undefined): string {
-  if (!message?.trim()) {
-    return "The model provider returned an error.";
+  void message;
+  return "The model provider returned an error.";
+}
+
+function classifyHttpFailure(status: number): RetryFailureCategory {
+  if (status === 401 || status === 403) {
+    return "configuration";
   }
 
-  return message.trim().slice(0, 500);
+  if (status === 429) {
+    return "rate_limited";
+  }
+
+  if (status === 408) {
+    return "timeout";
+  }
+
+  if (status >= 500) {
+    return "transient";
+  }
+
+  return "permanent";
+}
+
+function createClientError(
+  code: ConstructorParameters<typeof OpenRouterClientError>[0],
+  message: string,
+  category: RetryFailureCategory,
+): OpenRouterClientError {
+  return new OpenRouterClientError(code, message, isRetryEligible(category));
+}
+
+function delay(ms: number): Promise<void> {
+  if (ms <= 0) {
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function isChairmanContext(
@@ -131,10 +176,10 @@ function parseProviderResponse(
       ...diagnosticContext,
     });
 
-    throw new OpenRouterClientError(
+    throw createClientError(
       "INVALID_PROVIDER_RESPONSE",
       "The model provider returned an unreadable response.",
-      true,
+      "invalid_response",
     );
   }
 
@@ -161,10 +206,10 @@ function extractAssistantContent(
       ...diagnosticContext,
     });
 
-    throw new OpenRouterClientError(
+    throw createClientError(
       "INVALID_PROVIDER_RESPONSE",
       "The model provider did not return assistant content.",
-      true,
+      "invalid_response",
     );
   }
 
@@ -177,10 +222,10 @@ function extractAssistantContent(
       ...diagnosticContext,
     });
 
-    throw new OpenRouterClientError(
+    throw createClientError(
       "INVALID_PROVIDER_RESPONSE",
       "The model provider did not return assistant content.",
-      true,
+      "invalid_response",
     );
   }
 
@@ -225,10 +270,10 @@ async function executeOpenRouterRequest(
   } = options;
 
   if (!model.trim()) {
-    throw new OpenRouterClientError(
+    throw createClientError(
       "CONFIGURATION_ERROR",
       "A model ID is required for OpenRouter requests.",
-      false,
+      "configuration",
     );
   }
 
@@ -290,10 +335,10 @@ async function executeOpenRouterRequest(
         executionContext,
       });
 
-      throw new OpenRouterClientError(
+      throw createClientError(
         "INVALID_PROVIDER_RESPONSE",
         "The model provider returned malformed JSON.",
-        true,
+        "invalid_response",
       );
     }
 
@@ -309,16 +354,16 @@ async function executeOpenRouterRequest(
 
     if (!response.ok) {
       const status = response.status;
+      // Consume provider message only to prove sanitization discards it.
       const providerMessage = sanitizeProviderMessage(parsed.error?.message);
-      const retryable =
-        status >= 500 || status === 429 || status === 408;
+      const category = classifyHttpFailure(status);
 
-      throw new OpenRouterClientError(
+      throw createClientError(
         status === 401 || status === 403
           ? "CONFIGURATION_ERROR"
           : "PROVIDER_ERROR",
         providerMessage,
-        retryable,
+        category,
       );
     }
 
@@ -345,20 +390,37 @@ async function executeOpenRouterRequest(
     }
 
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new OpenRouterClientError(
+      throw createClientError(
         "PROVIDER_TIMEOUT",
         "The model provider did not respond within the allowed time.",
-        true,
+        "timeout",
       );
     }
 
-    throw new OpenRouterClientError(
+    throw createClientError(
       "PROVIDER_ERROR",
       "Unable to reach the model provider.",
-      true,
+      "transient",
     );
   } finally {
     clearTimeout(timeoutId);
+  }
+}
+
+function classifyOpenRouterError(
+  error: OpenRouterClientError,
+): RetryFailureCategory {
+  switch (error.code) {
+    case "PROVIDER_TIMEOUT":
+      return "timeout";
+    case "CONFIGURATION_ERROR":
+      return "configuration";
+    case "INVALID_PROVIDER_RESPONSE":
+      return "invalid_response";
+    case "PROVIDER_ERROR":
+      return error.retryable ? "transient" : "permanent";
+    default:
+      return "permanent";
   }
 }
 
@@ -368,8 +430,9 @@ export async function callOpenRouter(
   let retryCount = 0;
   let lastError: OpenRouterClientError | undefined;
   const { executionContext } = options;
+  const maxAttempts = DEFAULT_RETRY_POLICY.maxAttempts;
 
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     try {
       const result = await executeOpenRouterRequest(options, attempt);
 
@@ -393,8 +456,15 @@ export async function callOpenRouter(
       }
 
       lastError = error;
+      const category = classifyOpenRouterError(error);
 
-      if (error.retryable && attempt < MAX_RETRIES) {
+      if (
+        shouldRetryAttempt({
+          category,
+          attemptIndex: attempt,
+          maxAttempts,
+        })
+      ) {
         retryCount += 1;
         console.warn(
           `[OpenRouter] Retrying request: attempt=${attempt + 1} code=${error.code}`,
@@ -410,6 +480,7 @@ export async function callOpenRouter(
           });
         }
 
+        await delay(getRetryDelayMs(attempt, category));
         continue;
       }
 
@@ -427,9 +498,12 @@ export async function callOpenRouter(
     }
   }
 
-  throw lastError ?? new OpenRouterClientError(
-    "PROVIDER_ERROR",
-    "Unable to reach the model provider.",
-    true,
+  throw (
+    lastError ??
+    createClientError(
+      "PROVIDER_ERROR",
+      "Unable to reach the model provider.",
+      "transient",
+    )
   );
 }

@@ -267,7 +267,8 @@ test("runAdvisor normalizes OpenRouter provider errors into safe failed results"
   );
 
   assert.equal(result.status, "failed");
-  assert.match(result.errorMessage, /Rate limit exceeded/);
+  assert.equal(result.errorMessage, "The model provider returned an error.");
+  assert.doesNotMatch(result.errorMessage ?? "", /Rate limit exceeded/i);
 });
 
 test("runAdvisor returns failed result when model environment variable is missing", async () => {

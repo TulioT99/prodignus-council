@@ -127,8 +127,20 @@ Configuration lives in `src/config/council.ts` (non-secret metadata only). Model
 ### Error behavior
 
 - **Invalid request** → HTTP 400, `ok: false`, no `CouncilResult`
-- **Advisor or Chairman provider failure** → HTTP 200, `ok: true`, partial `CouncilResult` with failed participants recorded explicitly
+- **Advisor or Chairman provider failure** → HTTP 200, `ok: true` (transport success), with `CouncilResult` recording failed participants. Response also includes additive session fields: `sessionStatus`, `sessionSeverity`, and `terminalReasonCode` so clients need not infer failure from narrative text alone.
 - **Orchestrator crash** → HTTP 500, `ok: false`
+
+Transport-level `ok: true` means the request was processed and a session outcome was produced. It does **not** mean the Council session was `complete`. Use `sessionStatus` / `sessionSeverity` / `result.status` for session health.
+
+### Provider retries
+
+OpenRouter calls use a centralized, provider-neutral retry policy (`src/lib/retry/`):
+
+- Eligible transient failures (timeouts, rate limits, 5xx-class provider errors, invalid provider responses) may be retried.
+- Retries are **bounded** (default: 3 total attempts = 1 initial + 2 retries).
+- Exhaustion **fails closed** — the caller receives a structured failure; there is no silent success.
+- Retry behavior does **not** imply alternate-model fallback (optional alternate-model fallback remains deferred).
+- Backoff/config externalization of retry knobs is deferred to later configuration work.
 
 ### Environment variables
 
@@ -155,7 +167,8 @@ npm run test     # Council integrity, chairman, and orchestration tests
 
 ### Limitations
 
-- No persistence, authentication, streaming, retries, or peer review
+- No persistence, authentication, streaming, or peer review
+- Provider retries are bounded and policy-driven; alternate-model fallback after exhaustion is not implemented
 - All advisors require configured OpenRouter models
 - Chairman depends on available advisor outputs; synthesis quality varies when advisors fail
 - No user-selectable models
