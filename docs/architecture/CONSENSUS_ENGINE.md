@@ -103,10 +103,10 @@ Prompts and sensitive content are not logged.
 
 ## Baseline succession
 
-| Milestone                  | Commit                                                                                  | Role                                          |
-| -------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------- |
-| WP-07 Configuration Slice  | `e0d9424` (feat) / published evidence later                                             | Config baseline before hardening              |
-| WP-03 Advisor Reliability  | `d76ee128d3f5d925b99b9f7b32c786fcf2cae7ef`                                              | Validated opinion gate                        |
-| **WP-04 Consensus Engine** | See [WP-04-IMPLEMENTATION-BASELINE.md](../assessments/WP-04-IMPLEMENTATION-BASELINE.md) | **Current canonical implementation baseline** |
+| Milestone                  | Commit                                      | Role                                          |
+| -------------------------- | ------------------------------------------- | --------------------------------------------- |
+| WP-07 Configuration Slice  | `e0d9424` (feat) / published evidence later | Config baseline before hardening              |
+| WP-03 Advisor Reliability  | `d76ee128d3f5d925b99b9f7b32c786fcf2cae7ef`  | Validated opinion gate                        |
+| **WP-04 Consensus Engine** | `3146af80bf1455f6adede8ba6979bd11bf20818a`  | **Current canonical implementation baseline** |
 
 Subsequent work packages **WP-05**, **WP-06**, **WP-07 Observability Slice**, and **WP-08** must start from the published WP-04 baseline commit.

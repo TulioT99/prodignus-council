@@ -43,13 +43,14 @@ verdict: PASS WITH OBSERVATIONS
 
 > **WP-04 Canonical Implementation Baseline**
 
-| Item           | Value                                    |
-| -------------- | ---------------------------------------- |
-| Commit hash    | `PLACEHOLDER_AFTER_COMMIT`               |
-| Commit message | `feat: implement WP-04 Consensus Engine` |
-| Branch         | `master`                                 |
+| Item           | Value                                      |
+| -------------- | ------------------------------------------ |
+| Commit hash    | `3146af80bf1455f6adede8ba6979bd11bf20818a` |
+| Commit message | `feat: implement WP-04 Consensus Engine`   |
+| Branch         | `master`                                   |
+| Published at   | 2026-07-27 22:28:04 +0200                  |
 
-This placeholder is replaced immediately after the publication commit is created and before remote push completes. If this file still shows `PLACEHOLDER_AFTER_COMMIT` after publication, treat `git log -1 --grep="WP-04 Consensus Engine"` on `master` as authoritative.
+This commit is the **WP-04 Canonical Implementation Baseline**. All subsequent Decision Council work packages must start from this commit.
 
 ## Architecture milestone progression
 
