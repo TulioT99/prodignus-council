@@ -17,6 +17,8 @@ import {
   createDecisionContext,
   recordDecisionContextIntegrity,
 } from "@/lib/council/decision-context";
+import { ABORT_REASON_CANCELLED } from "@/lib/council/execution-abort";
+import { selectValidatedAdvisorOpinions } from "@/lib/council/validated-advisor-opinions";
 import { retrieveEvidenceForCouncil } from "@/lib/pkos/context-retrieval-engine";
 import { getAdvisorPersonaById } from "@/data/advisor-personas";
 import type { AdvisorResult, CouncilResult, Decision } from "@/types/council";
@@ -24,6 +26,7 @@ import type { AdvisorResult, CouncilResult, Decision } from "@/types/council";
 async function resolveAdvisorResult(
   decisionContext: ReturnType<typeof createDecisionContext>,
   advisorId: string,
+  signal?: AbortSignal,
 ): Promise<AdvisorResult> {
   const persona = getAdvisorPersonaById(advisorId);
   const executionConfig = getAdvisorExecutionConfig(advisorId);
@@ -32,7 +35,7 @@ async function resolveAdvisorResult(
     throw new Error(`Advisor execution config not found: ${advisorId}`);
   }
 
-  return runAdvisor(decisionContext, persona, executionConfig);
+  return runAdvisor(decisionContext, persona, executionConfig, { signal });
 }
 
 function resolveSettledAdvisorResult(
@@ -57,7 +60,10 @@ function resolveSettledAdvisorResult(
   );
 }
 
-async function runCouncilSession(decision: Decision): Promise<CouncilResult> {
+async function runCouncilSession(
+  decision: Decision,
+  signal?: AbortSignal,
+): Promise<CouncilResult> {
   const runtime = getRuntimeConfig();
   const advisorOrder = getAdvisorExecutionOrder();
   const councilStartedAt = Date.now();
@@ -76,7 +82,8 @@ async function runCouncilSession(decision: Decision): Promise<CouncilResult> {
   const settledResults = await mapWithConcurrency(
     advisorOrder,
     runtime.advisors.maxConcurrency,
-    (advisorId) => resolveAdvisorResult(decisionContext, advisorId),
+    (advisorId) => resolveAdvisorResult(decisionContext, advisorId, signal),
+    signal,
   );
   const advisorStageDurationMs = Date.now() - advisorStageStartedAt;
 
@@ -87,6 +94,19 @@ async function runCouncilSession(decision: Decision): Promise<CouncilResult> {
       decisionContext.executionId,
     ),
   );
+
+  // Validation gate for future consensus (WP-04). Side-effect free; keeps
+  // Chairman path unchanged while proving validated opinions are selectable.
+  const validatedOpinions = selectValidatedAdvisorOpinions(advisorResults);
+  if (runtime.features.enableDetailedTraces) {
+    console.info(
+      `[Council] Validated advisor opinions: executionId=${decisionContext.executionId} count=${validatedOpinions.length}/${advisorResults.length}`,
+    );
+  }
+
+  if (signal?.aborted) {
+    throw new Error("Council session was cancelled.");
+  }
 
   const chairmanStartedAt = Date.now();
   const chairman = runtime.chairman.enabled
@@ -120,13 +140,15 @@ export async function runCouncil(decision: Decision): Promise<CouncilResult> {
     return runCouncilSession(decision);
   }
 
+  const sessionController = new AbortController();
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
   try {
     return await Promise.race([
-      runCouncilSession(decision),
+      runCouncilSession(decision, sessionController.signal),
       new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => {
+          sessionController.abort(ABORT_REASON_CANCELLED);
           reject(
             new Error(
               `Council session exceeded overall timeout of ${overallTimeoutMs}ms.`,
@@ -138,6 +160,10 @@ export async function runCouncil(decision: Decision): Promise<CouncilResult> {
   } finally {
     if (timeoutId !== undefined) {
       clearTimeout(timeoutId);
+    }
+
+    if (!sessionController.signal.aborted) {
+      sessionController.abort(ABORT_REASON_CANCELLED);
     }
   }
 }

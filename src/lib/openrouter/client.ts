@@ -2,6 +2,13 @@ import "server-only";
 
 import { councilConfig } from "@/config/council";
 import { getRuntimeConfig } from "@/config/runtime";
+import {
+  combineAbortSignals,
+  createDeadlineController,
+  isAbortError,
+  isCancellationReason,
+  isTimeoutReason,
+} from "@/lib/council/execution-abort";
 import type { OpenRouterExecutionContext } from "@/lib/openrouter/execution-context";
 import {
   buildProviderResponseDiagnosticSnapshot,
@@ -27,6 +34,8 @@ export type CallOpenRouterOptions = {
   userPrompt: string;
   temperature?: number;
   timeoutMs?: number;
+  /** Optional parent cancellation signal (council/session abort). */
+  signal?: AbortSignal;
   executionContext?: OpenRouterExecutionContext;
 };
 
@@ -106,14 +115,67 @@ function createClientError(
   );
 }
 
-function delay(ms: number): Promise<void> {
+function delay(ms: number, signal?: AbortSignal): Promise<void> {
   if (ms <= 0) {
+    if (signal?.aborted) {
+      throw createCancelledClientError();
+    }
+
     return Promise.resolve();
   }
 
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(createCancelledClientError());
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+
+    const onAbort = (): void => {
+      clearTimeout(timeoutId);
+      reject(createCancelledClientError());
+    };
+
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
+}
+
+function createCancelledClientError(): OpenRouterClientError {
+  return createClientError(
+    "REQUEST_CANCELLED",
+    "The model request was cancelled.",
+    "permanent",
+  );
+}
+
+function resolveAbortFailure(
+  combinedSignal: AbortSignal,
+  externalSignal: AbortSignal | undefined,
+): OpenRouterClientError {
+  const reason = combinedSignal.reason;
+
+  if (
+    isCancellationReason(reason) ||
+    (externalSignal?.aborted &&
+      (isCancellationReason(externalSignal.reason) ||
+        !isTimeoutReason(externalSignal.reason)))
+  ) {
+    return createCancelledClientError();
+  }
+
+  if (isTimeoutReason(reason) || externalSignal?.aborted !== true) {
+    return createClientError(
+      "PROVIDER_TIMEOUT",
+      "The model provider did not respond within the allowed time.",
+      "timeout",
+    );
+  }
+
+  return createCancelledClientError();
 }
 
 function isChairmanContext(
@@ -261,6 +323,7 @@ async function executeOpenRouterRequest(
     userPrompt,
     temperature = getRuntimeConfig().openRouter.defaultTemperature,
     timeoutMs = resolveOpenRouterTimeoutMs(),
+    signal: externalSignal,
     executionContext,
   } = options;
 
@@ -270,6 +333,10 @@ async function executeOpenRouterRequest(
       "A model ID is required for OpenRouter requests.",
       "configuration",
     );
+  }
+
+  if (externalSignal?.aborted) {
+    throw createCancelledClientError();
   }
 
   if (isChairmanContext(executionContext)) {
@@ -283,8 +350,8 @@ async function executeOpenRouterRequest(
 
   const apiKey = getApiKey();
   const startedAt = Date.now();
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const deadline = createDeadlineController(timeoutMs);
+  const combined = combineAbortSignals(deadline.signal, externalSignal);
 
   try {
     const openRouter = getRuntimeConfig().openRouter;
@@ -307,7 +374,7 @@ async function executeOpenRouterRequest(
       method: "POST",
       headers: buildRequestHeaders(apiKey),
       body: JSON.stringify(requestBody),
-      signal: controller.signal,
+      signal: combined.signal,
     });
 
     const durationMs = Date.now() - startedAt;
@@ -391,12 +458,8 @@ async function executeOpenRouterRequest(
       throw error;
     }
 
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw createClientError(
-        "PROVIDER_TIMEOUT",
-        "The model provider did not respond within the allowed time.",
-        "timeout",
-      );
+    if (isAbortError(error) || combined.signal.aborted) {
+      throw resolveAbortFailure(combined.signal, externalSignal);
     }
 
     throw createClientError(
@@ -405,7 +468,8 @@ async function executeOpenRouterRequest(
       "transient",
     );
   } finally {
-    clearTimeout(timeoutId);
+    deadline.cleanup();
+    combined.cleanup();
   }
 }
 
@@ -420,10 +484,14 @@ export async function callOpenRouter(
 ): Promise<OpenRouterCompletionResult> {
   let retryCount = 0;
   let lastError: OpenRouterClientError | undefined;
-  const { executionContext } = options;
+  const { executionContext, signal: externalSignal } = options;
   const maxAttempts = getRuntimeConfig().retry.maxAttempts;
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    if (externalSignal?.aborted) {
+      throw createCancelledClientError();
+    }
+
     try {
       const result = await executeOpenRouterRequest(options, attempt);
 
@@ -449,6 +517,10 @@ export async function callOpenRouter(
       lastError = error;
       const category = classifyOpenRouterError(error);
 
+      if (error.code === "REQUEST_CANCELLED") {
+        throw error;
+      }
+
       if (
         shouldRetryAttempt({
           category,
@@ -471,7 +543,7 @@ export async function callOpenRouter(
           });
         }
 
-        await delay(getRetryDelayMs(attempt, category));
+        await delay(getRetryDelayMs(attempt, category), externalSignal);
         continue;
       }
 

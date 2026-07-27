@@ -6,15 +6,15 @@ import {
   parseAdvisorResponseForPersona,
 } from "@/lib/council/advisor-response-router";
 import {
-  AdvisorExecutionError,
-  CouncilConfigurationError,
-  InvalidModelOutputError,
-  ProviderTimeoutError,
-  toAdvisorSafeMessage,
-} from "@/lib/council/errors";
+  ADVISOR_CANCELLED_SAFE_MESSAGE,
+  classifyAdvisorExecutionError,
+  createFailedAdvisorResult,
+  createSuccessfulAdvisorResult,
+  UNCONFIGURED_MODEL_LABEL,
+} from "@/lib/council/advisor-execution-result";
+import { CouncilConfigurationError } from "@/lib/council/errors";
 import { getRuntimeConfig } from "@/config/runtime";
 import { callOpenRouter, resolveOpenRouterTimeoutMs } from "@/lib/openrouter/client";
-import { OpenRouterClientError } from "@/lib/openrouter/types";
 import type {
   AdvisorExecutionConfig,
   AdvisorPersona,
@@ -22,7 +22,10 @@ import type {
   DecisionContext,
 } from "@/types/council";
 
-const UNCONFIGURED_MODEL_LABEL = "Unconfigured model";
+export {
+  createUnexpectedAdvisorFailureResult,
+  normalizeAdvisorConfidence,
+} from "@/lib/council/advisor-execution-result";
 
 function resolveModel(modelEnvVar: string): string {
   const model = process.env[modelEnvVar]?.trim();
@@ -34,103 +37,6 @@ function resolveModel(modelEnvVar: string): string {
   }
 
   return model;
-}
-
-export function createUnexpectedAdvisorFailureResult(
-  persona: AdvisorPersona,
-  executionId: string,
-  errorMessage = "The advisor could not complete this review.",
-): AdvisorResult {
-  return createFailedAdvisorResult(persona, executionId, errorMessage);
-}
-
-function createFailedAdvisorResult(
-  persona: AdvisorPersona,
-  executionId: string,
-  errorMessage: string,
-  durationMs = 0,
-  modelLabel = UNCONFIGURED_MODEL_LABEL,
-): AdvisorResult {
-  return {
-    persona: {
-      ...persona,
-      model: modelLabel,
-    },
-    source: "live",
-    status: "failed",
-    executionId,
-    summary: "The advisor could not complete this review.",
-    analysis: [],
-    assumptions: [],
-    risks: [],
-    recommendation: "insufficient_information",
-    confidence: 0,
-    durationMs,
-    totalTokens: 0,
-    promptTokens: 0,
-    completionTokens: 0,
-    errorMessage,
-  };
-}
-
-function createSuccessfulAdvisorResult(
-  persona: AdvisorPersona,
-  executionId: string,
-  content: ReturnType<typeof mapAdvisorResponseToResultFields>,
-  model: string,
-  durationMs: number,
-  promptTokens: number,
-  completionTokens: number,
-  totalTokens: number,
-  estimatedCostUsd?: number,
-): AdvisorResult {
-  return {
-    persona: {
-      ...persona,
-      model,
-    },
-    source: "live",
-    status: "success",
-    executionId,
-    summary: content.summary,
-    analysis: content.analysis,
-    assumptions: content.assumptions,
-    risks: content.risks,
-    recommendation: content.recommendation,
-    confidence: content.confidence / 100,
-    keyArguments: content.keyArguments,
-    unknowns: content.unknowns,
-    accessibilityConcerns: content.accessibilityConcerns,
-    journeyBarriers: content.journeyBarriers,
-    engineeringConcerns: content.engineeringConcerns,
-    operationalConcerns: content.operationalConcerns,
-    technicalAlternatives: content.technicalAlternatives,
-    humanImpact: content.humanImpact,
-    ethicalConcerns: content.ethicalConcerns,
-    inclusionConcerns: content.inclusionConcerns,
-    longTermEffects: content.longTermEffects,
-    durationMs,
-    totalTokens,
-    promptTokens,
-    completionTokens,
-    estimatedCostUsd,
-  };
-}
-
-function mapProviderError(error: OpenRouterClientError): AdvisorExecutionError {
-  if (error.code === "PROVIDER_TIMEOUT") {
-    return new ProviderTimeoutError(error.message);
-  }
-
-  if (error.code === "CONFIGURATION_ERROR") {
-    return new AdvisorExecutionError(
-      "PROVIDER_ERROR",
-      "The advisor model is not configured on the server.",
-      false,
-    );
-  }
-
-  return new AdvisorExecutionError(error.code, error.message, error.retryable);
 }
 
 function logAdvisorExecution(entry: {
@@ -146,6 +52,12 @@ function logAdvisorExecution(entry: {
   retryCount?: number;
   errorCategory?: string;
 }): void {
+  const runtime = getRuntimeConfig();
+
+  if (!runtime.features.enableStructuredLogging) {
+    return;
+  }
+
   console.info(
     `[Council Advisor] ${JSON.stringify({
       advisorId: entry.advisorId,
@@ -163,10 +75,23 @@ function logAdvisorExecution(entry: {
   );
 }
 
+export type RunAdvisorOptions = {
+  /** Parent/session cancellation signal; aborts in-flight provider work. */
+  signal?: AbortSignal;
+};
+
+/**
+ * Execute a single advisor through the deterministic reliability lifecycle:
+ * init → provider call (timeout + retry from WP-07 runtime config) →
+ * parse/validate → success/failure result → cleanup (via provider finally).
+ *
+ * Never throws for provider/parse failures; returns a failed AdvisorResult.
+ */
 export async function runAdvisor(
   decisionContext: DecisionContext,
   persona: AdvisorPersona,
   config: AdvisorExecutionConfig,
+  options: RunAdvisorOptions = {},
 ): Promise<AdvisorResult> {
   if (persona.id !== config.advisorId) {
     throw new Error(
@@ -174,15 +99,18 @@ export async function runAdvisor(
     );
   }
 
+  const startedAt = Date.now();
   let model: string;
 
   try {
     model = resolveModel(config.modelEnvVar);
   } catch (error) {
+    const classification = classifyAdvisorExecutionError(error);
     const failed = createFailedAdvisorResult(
       persona,
       decisionContext.executionId,
-      toAdvisorSafeMessage(error),
+      classification.safeMessage,
+      Date.now() - startedAt,
     );
 
     logAdvisorExecution({
@@ -190,9 +118,31 @@ export async function runAdvisor(
       advisorName: persona.displayName,
       model: UNCONFIGURED_MODEL_LABEL,
       status: "failed",
-      latencyMs: 0,
+      latencyMs: failed.durationMs,
       executionId: decisionContext.executionId,
-      errorCategory: "CONFIGURATION_ERROR",
+      errorCategory: classification.errorCategory,
+    });
+
+    return failed;
+  }
+
+  if (options.signal?.aborted) {
+    const failed = createFailedAdvisorResult(
+      persona,
+      decisionContext.executionId,
+      ADVISOR_CANCELLED_SAFE_MESSAGE,
+      Date.now() - startedAt,
+      model,
+    );
+
+    logAdvisorExecution({
+      advisorId: persona.id,
+      advisorName: persona.displayName,
+      model,
+      status: "failed",
+      latencyMs: failed.durationMs,
+      executionId: decisionContext.executionId,
+      errorCategory: "REQUEST_CANCELLED",
     });
 
     return failed;
@@ -205,12 +155,14 @@ export async function runAdvisor(
 
   try {
     const runtime = getRuntimeConfig();
+    const timeoutMs = resolveOpenRouterTimeoutMs();
     const completion = await callOpenRouter({
       model,
       systemPrompt,
       userPrompt,
       temperature: runtime.openRouter.defaultTemperature,
-      timeoutMs: resolveOpenRouterTimeoutMs(),
+      timeoutMs,
+      signal: options.signal,
       executionContext: {
         caller: "advisor",
         executionId: decisionContext.executionId,
@@ -246,23 +198,11 @@ export async function runAdvisor(
       completion.estimatedCostUsd,
     );
   } catch (error) {
-    let errorCategory = "INTERNAL_ERROR";
-    let safeMessage = toAdvisorSafeMessage(error);
-
-    if (error instanceof OpenRouterClientError) {
-      const mapped = mapProviderError(error);
-      errorCategory = mapped.code;
-      safeMessage = mapped.safeMessage;
-    } else if (error instanceof InvalidModelOutputError) {
-      errorCategory = error.code;
-      safeMessage = error.safeMessage;
-    } else if (error instanceof CouncilConfigurationError) {
-      errorCategory = error.code;
-      safeMessage = toAdvisorSafeMessage(error);
-    }
+    const classification = classifyAdvisorExecutionError(error);
+    const durationMs = Date.now() - startedAt;
 
     console.error(
-      `[Council] Advisor execution failed: advisorId=${persona.id} advisorName="${persona.displayName}" stage=${error instanceof InvalidModelOutputError ? "parse" : "provider"} errorCategory=${errorCategory}${error instanceof InvalidModelOutputError ? ` validation="${error.message}"` : ""}`,
+      `[Council] Advisor execution failed: advisorId=${persona.id} advisorName="${persona.displayName}" stage=${classification.stage} errorCategory=${classification.errorCategory}${classification.stage === "parse" && error instanceof Error ? ` validation="${error.message}"` : ""}`,
     );
 
     logAdvisorExecution({
@@ -270,16 +210,16 @@ export async function runAdvisor(
       advisorName: persona.displayName,
       model,
       status: "failed",
-      latencyMs: 0,
+      latencyMs: durationMs,
       executionId: decisionContext.executionId,
-      errorCategory,
+      errorCategory: classification.errorCategory,
     });
 
     return createFailedAdvisorResult(
       persona,
       decisionContext.executionId,
-      safeMessage,
-      0,
+      classification.safeMessage,
+      durationMs,
       model,
     );
   }

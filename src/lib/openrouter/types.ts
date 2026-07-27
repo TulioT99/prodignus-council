@@ -54,7 +54,9 @@ export type OpenRouterClientErrorCode =
   | "CONFIGURATION_ERROR"
   | "PROVIDER_TIMEOUT"
   | "PROVIDER_ERROR"
-  | "INVALID_PROVIDER_RESPONSE";
+  | "INVALID_PROVIDER_RESPONSE"
+  /** Parent/session cancellation — not a provider failure; never retry. */
+  | "REQUEST_CANCELLED";
 
 export class OpenRouterClientError extends Error {
   readonly code: OpenRouterClientErrorCode;
