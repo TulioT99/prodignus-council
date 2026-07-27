@@ -173,7 +173,7 @@ No unrelated gaps implemented. GAP-26 deferred. Shared GAP-04/GAP-09 limited to 
 | Commit 1 summary | `fix: centralize provider retry policy and sanitize errors` |
 | Commit 2 hash | `4d763595a4d0cfce9de994db08e6c8388a2a3243` |
 | Commit 2 summary | `fix: surface Council terminal severity and reason codes` |
-| Commit 3 hash | *This documentation commit (recorded after creation)* |
+| Commit 3 hash | `4c8de9c4364e31a207f143114bf17aee7acf370a` |
 | Gap IDs | Resolves GAP-10, GAP-11; Implements GAP-04/GAP-09 (WP-02 slices); Verifies GAP-23, AC-S-02, AC-T-04; Defers GAP-26 |
 
 ---
