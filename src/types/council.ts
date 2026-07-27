@@ -27,6 +27,29 @@ export type DecisionStatus =
 
 export type CouncilSessionStatus = "complete" | "partial" | "failed";
 
+/**
+ * Client presentation severity for a completed orchestration response.
+ * Distinct from transport-level `ok` on CouncilApiSuccess/Failure.
+ */
+export type CouncilSessionSeverity = "success" | "warning" | "error";
+
+/**
+ * Minimal WP-02 terminal reason taxonomy (not the full WP-05 Chairman catalog).
+ * Codes describe Council session outcomes, not vendor/provider failures.
+ */
+export type CouncilTerminalReasonCode =
+  | "SESSION_COMPLETE"
+  | "PARTIAL_ADVISOR_FAILURE"
+  | "CHAIRMAN_SYNTHESIS_FAILURE"
+  | "INSUFFICIENT_ADVISOR_PARTICIPATION"
+  | "INTERNAL_ORCHESTRATION_FAILURE";
+
+export type CouncilTerminalOutcome = {
+  sessionStatus: CouncilSessionStatus;
+  sessionSeverity: CouncilSessionSeverity;
+  terminalReasonCode: CouncilTerminalReasonCode;
+};
+
 export type DecisionContextAttachment = {
   id: string;
   name: string;
@@ -206,8 +229,15 @@ export type CouncilApiRequest = {
 };
 
 export type CouncilApiSuccess = {
+  /** Transport/request-processing success: orchestration completed without crashing. */
   ok: true;
   result: CouncilResult;
+  /** Mirror of `result.status` for clients that should not dig into the payload. */
+  sessionStatus: CouncilSessionStatus;
+  /** Presentation severity for the Council session outcome. */
+  sessionSeverity: CouncilSessionSeverity;
+  /** Deterministic machine-readable terminal reason (WP-02 minimal taxonomy). */
+  terminalReasonCode: CouncilTerminalReasonCode;
 };
 
 export type CouncilApiFailure = {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { runCouncil } from "@/lib/council/orchestrator";
+import { deriveCouncilTerminalOutcome } from "@/lib/council/terminal-outcome";
 import {
   DecisionValidationError,
   validateCouncilRequestBody,
@@ -52,10 +53,14 @@ export async function POST(request: Request) {
 
   try {
     const result = await runCouncil(decision);
+    const terminal = deriveCouncilTerminalOutcome(result);
 
     const success: CouncilApiSuccess = {
       ok: true,
       result,
+      sessionStatus: terminal.sessionStatus,
+      sessionSeverity: terminal.sessionSeverity,
+      terminalReasonCode: terminal.terminalReasonCode,
     };
 
     return NextResponse.json(success);

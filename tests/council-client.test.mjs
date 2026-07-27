@@ -32,8 +32,20 @@ function createAdvisor(id) {
 }
 
 function createSuccessfulPayload(status = "complete") {
+  const sessionSeverity =
+    status === "complete" ? "success" : status === "partial" ? "warning" : "error";
+  const terminalReasonCode =
+    status === "complete"
+      ? "SESSION_COMPLETE"
+      : status === "partial"
+        ? "PARTIAL_ADVISOR_FAILURE"
+        : "CHAIRMAN_SYNTHESIS_FAILURE";
+
   return {
     ok: true,
+    sessionStatus: status,
+    sessionSeverity,
+    terminalReasonCode,
     result: {
       status,
       decision,
@@ -100,6 +112,28 @@ test("fetchCouncilResult returns parsed council result on success", async (t) =>
   assert.equal(result.status, "partial");
   assert.equal(result.chairman.recommendationType, "run_bounded_experiment");
   assert.equal(result.advisors.length, 5);
+});
+
+test("fetchCouncilResult remains compatible when additive session fields are present", async (t) => {
+  const originalFetch = globalThis.fetch;
+
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const payload = createSuccessfulPayload("failed");
+  assert.equal(payload.ok, true);
+  assert.equal(payload.sessionSeverity, "error");
+  assert.equal(payload.terminalReasonCode, "CHAIRMAN_SYNTHESIS_FAILURE");
+
+  globalThis.fetch = async () =>
+    new Response(JSON.stringify(payload), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+
+  const result = await fetchCouncilResult(decision);
+  assert.equal(result.status, "failed");
 });
 
 test("fetchCouncilResult throws retryable error on network failure", async (t) => {

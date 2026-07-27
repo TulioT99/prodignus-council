@@ -58,5 +58,8 @@ export async function fetchCouncilResult(decision: Decision): Promise<CouncilRes
     );
   }
 
+  // Additive session fields (sessionStatus / sessionSeverity / terminalReasonCode)
+  // are available on the transport payload for monitors; the UI continues to use
+  // `result.status` and remains compatible when fields are present.
   return payload.result;
 }
