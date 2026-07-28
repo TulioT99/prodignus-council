@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { validChairmanPayload } from "./chairman-fixtures.mjs";
-import { createTestDecisionMetadata } from "./chairman-test-helpers.mjs";
+import {
+  createTestDecisionConfidence,
+  createTestDecisionMetadata,
+  createTestDecisionUncertainty,
+} from "./chairman-test-helpers.mjs";
 import {
   buildCouncilRecommendationBriefing,
   CHAIRMAN_RECOMMENDATION_HEADLINES,
@@ -23,6 +27,17 @@ import {
 } from "../src/lib/council/council-recommendation-presentation.ts";
 
 function createSuccessfulChairman(overrides = {}) {
+  const decisionConfidence =
+    overrides.decisionConfidence ??
+    createTestDecisionConfidence({
+      evidenceConfidence: 0.8,
+      reasoningConfidence: 0.78,
+      recommendationConfidence: 0.78,
+      consensusConfidence: 0.75,
+    });
+  const uncertainty =
+    overrides.uncertainty ?? createTestDecisionUncertainty({ material: false });
+
   return {
     status: "success",
     executionId: "EXEC-UI-001",
@@ -50,11 +65,13 @@ function createSuccessfulChairman(overrides = {}) {
     reversalCriteria: validChairmanPayload.reversalCriteria,
     keyArguments: validChairmanPayload.keyArguments,
     nextSteps: validChairmanPayload.nextActions.map((action) => action.action),
-    confidence: 0.78,
     model: "test/chairman",
     durationMs: 1200,
     totalTokens: 300,
     ...overrides,
+    decisionConfidence,
+    uncertainty,
+    confidence: decisionConfidence.recommendationConfidence,
   };
 }
 
@@ -88,7 +105,13 @@ test("legacy system labels are not used in the executive UI copy", () => {
 test("executive section labels match the required hierarchy", () => {
   assert.equal(
     COUNCIL_RECOMMENDATION_UI.overallConfidence,
-    "Overall confidence",
+    "Recommendation confidence",
+  );
+  assert.equal(COUNCIL_RECOMMENDATION_UI.evidenceConfidence, "Evidence");
+  assert.equal(COUNCIL_RECOMMENDATION_UI.reasoningConfidence, "Reasoning");
+  assert.equal(
+    COUNCIL_RECOMMENDATION_UI.recommendationConfidence,
+    "Recommendation",
   );
   assert.equal(COUNCIL_RECOMMENDATION_UI.decisionSummary, "Decision summary");
   assert.equal(
@@ -120,6 +143,10 @@ test("buildCouncilRecommendationBriefing maps fields to executive sections", () 
     CHAIRMAN_RECOMMENDATION_HEADLINES.run_bounded_experiment,
   );
   assert.equal(briefing.overallConfidenceLabel, "78%");
+  assert.equal(briefing.confidenceTriad.evidencePercent, "80%");
+  assert.equal(briefing.confidenceTriad.reasoningPercent, "78%");
+  assert.equal(briefing.confidenceTriad.recommendationPercent, "78%");
+  assert.equal(briefing.uncertainty.material, false);
   assert.equal(
     briefing.decisionSummary,
     validChairmanPayload.decisionStatement,

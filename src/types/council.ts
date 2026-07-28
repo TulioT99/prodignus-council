@@ -328,6 +328,7 @@ export type ChairmanFailureReasonCode =
   | "INVALID_IDENTIFIERS"
   | "INVALID_CHAIRMAN_CONTRACT"
   | "INVALID_DECISION_METADATA"
+  | "INVALID_DECISION_CONFIDENCE"
   | "CONFIGURATION_ERROR"
   | "INSUFFICIENT_COUNCIL"
   | "PROVIDER_ERROR"
@@ -395,15 +396,59 @@ export type ChairmanResponseContent = {
 };
 
 /**
+ * Confidence Triad (ENG-0007 §10 / WP-05C).
+ * Three independent engineering dimensions plus preserved consensus confidence.
+ */
+export type DecisionConfidence = {
+  readonly schemaVersion: "1.0";
+  /** Documented derivation method identity. */
+  readonly method: "wp05c_structural_min_v1";
+  /** Preserved Consensus Package overall confidence (ENG-0006) — not overwritten. */
+  readonly consensusConfidence: number;
+  /** Evidence quality / coverage (independent of recommendation trust). */
+  readonly evidenceConfidence: number;
+  /** Internal coherence of Chairman reasoning, capped by evidence. */
+  readonly reasoningConfidence: number;
+  /** Published recommendation trust — derived, not independently invented. */
+  readonly recommendationConfidence: number;
+  readonly notes: readonly string[];
+};
+
+/**
+ * Explicit uncertainty communication (ENG-0007 §11 / WP-05C).
+ * Uncertainty must never be hidden on successful publication.
+ */
+export type DecisionUncertainty = {
+  readonly schemaVersion: "1.0";
+  /** True when material uncertainty indicators are present. */
+  readonly material: boolean;
+  readonly evidenceGaps: readonly string[];
+  readonly unresolvedDisagreement: readonly string[];
+  readonly conflictingAdvisors: readonly string[];
+  readonly assumptionsMade: readonly string[];
+  readonly informationLimitations: readonly string[];
+  readonly whatIsKnown: readonly string[];
+  readonly whatIsDisputed: readonly string[];
+  readonly whatIsMissing: readonly string[];
+  readonly howItConstrainsRecommendation: readonly string[];
+  readonly nextStepsToReduceUncertainty: readonly string[];
+};
+
+/**
  * Validated Chairman recommendation package (success path only).
  * Recommendation-shaped fields are intentionally absent from failure outcomes.
  * Decision Metadata is mandatory (ENG-0007 §6.2 / WP-05B).
+ * Decision Confidence + Uncertainty are mandatory (ENG-0007 §10–11 / WP-05C).
  */
 export type ChairmanSuccessResult = {
   status: "success";
   executionId: string;
   /** ENG-0007 Decision Metadata Package — required for successful publication. */
   metadata: DecisionMetadata;
+  /** ENG-0007 Confidence Triad — required for successful publication. */
+  decisionConfidence: DecisionConfidence;
+  /** ENG-0007 Uncertainty Package — required for successful publication. */
+  uncertainty: DecisionUncertainty;
   decision: CouncilDecision;
   decisionStatement: string;
   executiveSummary: string;
@@ -424,6 +469,10 @@ export type ChairmanSuccessResult = {
   reversalCriteria: string[];
   keyArguments: string[];
   nextSteps: string[];
+  /**
+   * Alias of `decisionConfidence.recommendationConfidence` (0–1).
+   * Prefer the Confidence Triad for presentation; this field remains for API compat.
+   */
   confidence: number;
   model: string;
   durationMs: number;

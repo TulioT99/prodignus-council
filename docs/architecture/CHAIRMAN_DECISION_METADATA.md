@@ -75,7 +75,7 @@ Invalid metadata blocks success publication (`INVALID_DECISION_METADATA` → `Ch
 
 ## Out of scope (later WP-05 slices)
 
-- Confidence triad (WP-05C)
+- Confidence triad (WP-05C) — see `docs/architecture/CHAIRMAN_CONFIDENCE_MODEL.md`
 - Decision Policy (WP-05D)
 - Recovery / richer failure taxonomy (WP-05E)
 - Full conformance evidence pack (WP-05F)

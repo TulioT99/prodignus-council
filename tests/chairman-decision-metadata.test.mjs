@@ -221,6 +221,8 @@ test("runChairman success publishes Decision Metadata with Consensus linkage", a
 
   assert.equal(result.status, "success");
   assert.ok(result.metadata);
+  assert.ok(result.decisionConfidence);
+  assert.ok(result.uncertainty);
   assert.equal(result.metadata.decisionId, "decpkg:EXEC-META-001");
   assert.equal(result.metadata.executionId, "EXEC-META-001");
   assert.equal(result.metadata.requestId, sampleDecision.id);

@@ -268,9 +268,91 @@ export function ChairmanCard({ chairman }: ChairmanCardProps) {
             {briefing.overallConfidenceLabel}
           </span>
         </p>
+        <dl className="mt-4 grid gap-3 text-sm text-neutral-800 sm:grid-cols-3">
+          <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2">
+            <dt className="font-semibold text-neutral-700">
+              {briefing.confidenceTriad.evidenceLabel}
+            </dt>
+            <dd className="mt-1 text-base font-semibold text-neutral-900">
+              {briefing.confidenceTriad.evidencePercent}
+            </dd>
+          </div>
+          <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2">
+            <dt className="font-semibold text-neutral-700">
+              {briefing.confidenceTriad.reasoningLabel}
+            </dt>
+            <dd className="mt-1 text-base font-semibold text-neutral-900">
+              {briefing.confidenceTriad.reasoningPercent}
+            </dd>
+          </div>
+          <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2">
+            <dt className="font-semibold text-neutral-700">
+              {briefing.confidenceTriad.recommendationLabel}
+            </dt>
+            <dd className="mt-1 text-base font-semibold text-neutral-900">
+              {briefing.confidenceTriad.recommendationPercent}
+            </dd>
+          </div>
+        </dl>
+        <p className="mt-2 text-xs text-neutral-600">
+          {briefing.confidenceTriad.consensusLabel}:{" "}
+          {briefing.confidenceTriad.consensusPercent}
+        </p>
       </header>
 
       <div className="mt-6 space-y-10">
+        {briefing.uncertainty.material ? (
+          <div
+            role="status"
+            className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+          >
+            <p className="font-semibold">{briefing.uncertainty.headline}</p>
+            {briefing.uncertainty.howItConstrainsRecommendation.length > 0 ? (
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {briefing.uncertainty.howItConstrainsRecommendation.map(
+                  (item) => (
+                    <li key={item}>{item}</li>
+                  ),
+                )}
+              </ul>
+            ) : null}
+            {briefing.uncertainty.evidenceGaps.length > 0 ? (
+              <div className="mt-3">
+                <p className="font-medium">Evidence gaps</p>
+                <ul className="mt-1 list-disc space-y-1 pl-5">
+                  {briefing.uncertainty.evidenceGaps.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {briefing.uncertainty.unresolvedDisagreement.length > 0 ? (
+              <div className="mt-3">
+                <p className="font-medium">Unresolved disagreement</p>
+                <ul className="mt-1 list-disc space-y-1 pl-5">
+                  {briefing.uncertainty.unresolvedDisagreement.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {briefing.uncertainty.conflictingAdvisors.length > 0 ? (
+              <div className="mt-3">
+                <p className="font-medium">Conflicting advisors</p>
+                <ul className="mt-1 list-disc space-y-1 pl-5">
+                  {briefing.uncertainty.conflictingAdvisors.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-sm text-neutral-700">
+            {briefing.uncertainty.headline}
+          </p>
+        )}
+
         {chairman.reducedConfidenceSynthesis ? (
           <div
             role="status"

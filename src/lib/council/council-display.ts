@@ -53,7 +53,15 @@ export const CHAIRMAN_RECOMMENDATION_HEADLINES: Record<
 
 export const COUNCIL_RECOMMENDATION_UI = {
   title: "Council Recommendation",
-  overallConfidence: "Overall confidence",
+  overallConfidence: "Recommendation confidence",
+  confidenceTriad: "Confidence assessment",
+  evidenceConfidence: "Evidence",
+  reasoningConfidence: "Reasoning",
+  recommendationConfidence: "Recommendation",
+  consensusConfidence: "Consensus (preserved)",
+  uncertainty: "Uncertainty",
+  materialUncertainty: "Material uncertainty present",
+  noMaterialUncertainty: "No material uncertainty indicators detected",
   decisionSummary: "Decision summary",
   whyRecommendation: "Why this recommendation?",
   keyRisks: "Key risks",
@@ -76,9 +84,35 @@ export const COUNCIL_RECOMMENDATION_UI = {
   expectedOutcome: "Expected outcome",
 } as const;
 
+export type ConfidenceTriadPresentation = {
+  evidenceLabel: string;
+  reasoningLabel: string;
+  recommendationLabel: string;
+  consensusLabel: string;
+  evidencePercent: string;
+  reasoningPercent: string;
+  recommendationPercent: string;
+  consensusPercent: string;
+};
+
+export type UncertaintyPresentation = {
+  material: boolean;
+  headline: string;
+  evidenceGaps: readonly string[];
+  unresolvedDisagreement: readonly string[];
+  conflictingAdvisors: readonly string[];
+  assumptionsMade: readonly string[];
+  informationLimitations: readonly string[];
+  whatIsMissing: readonly string[];
+  howItConstrainsRecommendation: readonly string[];
+  nextStepsToReduceUncertainty: readonly string[];
+};
+
 export type CouncilRecommendationBriefing = {
   headline: string;
   overallConfidenceLabel: string;
+  confidenceTriad: ConfidenceTriadPresentation;
+  uncertainty: UncertaintyPresentation;
   decisionSummary: string | null;
   whyRecommendation: string | null;
   keyRisks: string[];
@@ -96,6 +130,46 @@ function isDuplicateText(left: string, right: string): boolean {
 
 export function formatOverallConfidencePercent(confidence: number): string {
   return `${Math.round(confidence * 100)}%`;
+}
+
+export function buildConfidenceTriadPresentation(
+  chairman: ChairmanSuccessResult,
+): ConfidenceTriadPresentation {
+  const triad = chairman.decisionConfidence;
+
+  return {
+    evidenceLabel: COUNCIL_RECOMMENDATION_UI.evidenceConfidence,
+    reasoningLabel: COUNCIL_RECOMMENDATION_UI.reasoningConfidence,
+    recommendationLabel: COUNCIL_RECOMMENDATION_UI.recommendationConfidence,
+    consensusLabel: COUNCIL_RECOMMENDATION_UI.consensusConfidence,
+    evidencePercent: formatOverallConfidencePercent(triad.evidenceConfidence),
+    reasoningPercent: formatOverallConfidencePercent(triad.reasoningConfidence),
+    recommendationPercent: formatOverallConfidencePercent(
+      triad.recommendationConfidence,
+    ),
+    consensusPercent: formatOverallConfidencePercent(triad.consensusConfidence),
+  };
+}
+
+export function buildUncertaintyPresentation(
+  chairman: ChairmanSuccessResult,
+): UncertaintyPresentation {
+  const uncertainty = chairman.uncertainty;
+
+  return {
+    material: uncertainty.material,
+    headline: uncertainty.material
+      ? COUNCIL_RECOMMENDATION_UI.materialUncertainty
+      : COUNCIL_RECOMMENDATION_UI.noMaterialUncertainty,
+    evidenceGaps: uncertainty.evidenceGaps,
+    unresolvedDisagreement: uncertainty.unresolvedDisagreement,
+    conflictingAdvisors: uncertainty.conflictingAdvisors,
+    assumptionsMade: uncertainty.assumptionsMade,
+    informationLimitations: uncertainty.informationLimitations,
+    whatIsMissing: uncertainty.whatIsMissing,
+    howItConstrainsRecommendation: uncertainty.howItConstrainsRecommendation,
+    nextStepsToReduceUncertainty: uncertainty.nextStepsToReduceUncertainty,
+  };
 }
 
 export function buildCouncilRecommendationBriefing(
@@ -129,9 +203,13 @@ export function buildCouncilRecommendationBriefing(
         : "";
   }
 
+  const confidenceTriad = buildConfidenceTriadPresentation(chairman);
+
   return {
     headline,
-    overallConfidenceLabel: formatOverallConfidencePercent(chairman.confidence),
+    overallConfidenceLabel: confidenceTriad.recommendationPercent,
+    confidenceTriad,
+    uncertainty: buildUncertaintyPresentation(chairman),
     decisionSummary: decisionSummary || null,
     whyRecommendation: whyRecommendation || null,
     keyRisks: chairman.risks,

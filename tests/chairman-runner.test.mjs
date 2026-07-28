@@ -237,7 +237,13 @@ test("runChairman returns structured ChairmanResult on success", async () => {
   assert.equal(result.recommendationType, "run_bounded_experiment");
   assert.equal(result.decision, "test_first");
   assert.equal(result.executiveSummary, validChairmanPayload.executiveSummary);
-  assert.equal(result.confidence, 0.78);
+  assert.ok(result.decisionConfidence);
+  assert.ok(result.uncertainty);
+  assert.equal(
+    result.confidence,
+    result.decisionConfidence.recommendationConfidence,
+  );
+  assert.equal(result.decisionConfidence.method, "wp05c_structural_min_v1");
   assert.equal(result.totalTokens, 300);
   assert.equal(result.promptTokens, 100);
   assert.equal(result.completionTokens, 200);

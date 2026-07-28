@@ -53,7 +53,7 @@ verdict: PASS WITH OBSERVATIONS
 | Branch         | `master`                                                    |
 | Published at   | 2026-07-28 19:42:59 +0200                                   |
 
-This commit is the **WP-05B Canonical Implementation Baseline**. Subsequent WP-05 slices (WP-05C–WP-05F) that depend on Decision Metadata and Traceability must start from this commit.
+This commit is the **WP-05B Canonical Implementation Baseline** for Decision Metadata & Traceability. It has been **superseded** as the current Chairman Decision Engine implementation baseline by **WP-05C** (see `WP-05C-IMPLEMENTATION-BASELINE.md`). Metadata architecture remains in force and is preserved by WP-05C.
 
 ## Architecture milestone progression
 
@@ -62,8 +62,8 @@ WP-07 config slice
     → WP-03 Advisor Reliability (d76ee12)
         → WP-04 Consensus Engine (3146af8)
             → WP-05A Chairman Contract (9ae4974)
-                → WP-05B Decision Metadata  ← CURRENT BASELINE (Decision Metadata & Traceability)
-                    → WP-05C Confidence Triad
+                → WP-05B Decision Metadata (08dc9cd)
+                    → WP-05C Confidence Triad  ← CURRENT BASELINE (Confidence & Uncertainty)
                     → WP-05D Decision Policy
                     → WP-05E Failure / Recovery
                     → WP-05F Conformance Evidence
@@ -91,7 +91,9 @@ WP-07 config slice
 
 ## Mandatory starting point for
 
-- WP-05C — Confidence Triad & Uncertainty
+- WP-05C — Confidence Triad & Uncertainty (**published** — see `WP-05C-IMPLEMENTATION-BASELINE.md`)
 - WP-05D — Decision Policy Enforcement
 - WP-05E — Failure Model & Recovery Enhancements
 - WP-05F — Conformance Testing & Publication
+
+**Current Chairman implementation baseline:** WP-05C.

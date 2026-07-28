@@ -4,6 +4,10 @@ import { defaultChairmanContextBuilder } from "@/lib/council/chairman-context-bu
 import { ChairmanContextBuildError } from "@/lib/council/chairman-context.errors";
 import { validateChairmanExecutionContract } from "@/lib/council/chairman-contract";
 import {
+  buildDecisionConfidence,
+  validateDecisionConfidence,
+} from "@/lib/council/chairman-decision-confidence";
+import {
   buildChairmanFailureTraceability,
   buildConsensusPackageId,
   buildDecisionMetadata,
@@ -38,8 +42,10 @@ import type {
   ChairmanFailureReasonCode,
   ChairmanResult,
   ChairmanSuccessResult,
+  DecisionConfidence,
   DecisionContext,
   DecisionMetadata,
+  DecisionUncertainty,
 } from "@/types/council";
 
 const UNCONFIGURED_MODEL_LABEL = "Unconfigured model";
@@ -108,6 +114,8 @@ function createSuccessfulChairmanResult(
   totalTokens: number,
   estimatedCostUsd: number | undefined,
   metadata: DecisionMetadata,
+  decisionConfidence: DecisionConfidence,
+  uncertainty: DecisionUncertainty,
   options: {
     missingPerspectives?: string[];
     reducedConfidenceSynthesis?: boolean;
@@ -117,6 +125,8 @@ function createSuccessfulChairmanResult(
     status: "success",
     executionId,
     metadata,
+    decisionConfidence,
+    uncertainty,
     decision: content.decision,
     decisionStatement: content.decisionStatement,
     executiveSummary: content.executiveSummary,
@@ -137,7 +147,7 @@ function createSuccessfulChairmanResult(
     reversalCriteria: content.reversalCriteria,
     keyArguments: content.keyArguments,
     nextSteps: content.nextActions.map((action) => action.action),
-    confidence: content.confidence / 100,
+    confidence: decisionConfidence.recommendationConfidence,
     model,
     durationMs,
     totalTokens,
@@ -182,10 +192,11 @@ function logChairmanExecution(entry: {
 /**
  * Run the Chairman Decision Engine.
  *
- * Pipeline gate (WP-05A / WP-05B):
- * Consensus Package → Contract Validation → Chairman synthesis → Metadata validation
+ * Pipeline gate (WP-05A / WP-05B / WP-05C):
+ * Consensus Package → Contract Validation → Chairman synthesis →
+ * Metadata validation → Confidence Triad validation
  *
- * Invalid contracts or invalid Decision Metadata fail closed as `ChairmanFailed`
+ * Invalid contracts, metadata, or confidence fail closed as `ChairmanFailed`
  * before successful publication.
  */
 export async function runChairman(
@@ -371,6 +382,47 @@ export async function runChairman(
       return failed;
     }
 
+    const reducedConfidenceSynthesis =
+      successfulAdvisorCount === synthesisMinimum;
+    const { decisionConfidence, uncertainty } = buildDecisionConfidence({
+      consensus,
+      chairmanNumericConfidence: content.confidence / 100,
+      content,
+      advisors,
+      missingPerspectives,
+      reducedConfidenceSynthesis,
+    });
+    const confidenceValidation = validateDecisionConfidence(
+      decisionConfidence,
+      uncertainty,
+      consensus.confidence.overall,
+    );
+
+    if (!confidenceValidation.ok) {
+      const failed = createFailedChairmanResult(
+        decisionContext.executionId,
+        confidenceValidation.message,
+        "INVALID_DECISION_CONFIDENCE",
+        {
+          model: completion.model,
+          decisionContext,
+          consensus,
+        },
+      );
+
+      logChairmanExecution({
+        status: "failed",
+        outcome: "ChairmanFailed",
+        model: completion.model,
+        latencyMs: completion.durationMs,
+        executionId: decisionContext.executionId,
+        errorCategory: "INVALID_DECISION_CONFIDENCE",
+        successfulAdvisorCount,
+      });
+
+      return failed;
+    }
+
     logChairmanExecution({
       status: "success",
       model: completion.model,
@@ -393,10 +445,12 @@ export async function runChairman(
       completion.totalTokens,
       completion.estimatedCostUsd,
       metadataValidation.metadata,
+      confidenceValidation.decisionConfidence,
+      confidenceValidation.uncertainty,
       {
         missingPerspectives:
           missingPerspectives.length > 0 ? missingPerspectives : undefined,
-        reducedConfidenceSynthesis: successfulAdvisorCount === synthesisMinimum,
+        reducedConfidenceSynthesis,
       },
     );
   } catch (error) {
