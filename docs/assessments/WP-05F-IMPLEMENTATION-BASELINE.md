@@ -53,10 +53,10 @@ verdict: PASS WITH OBSERVATIONS
 
 | Item           | Value                                                                |
 | -------------- | -------------------------------------------------------------------- |
-| Commit hash    | `PENDING_PUBLICATION_HEAD`                                           |
-| Commit message | `feat: publish WP-05E Failure Model and WP-05F Conformance baseline` |
-| Branch         | `master`                                                             |
-| Published at   | PENDING                                                              |
+| Commit hash    | `6930cfa75d1a605432d6b3ea5dec063f9f633160`                                   |
+| Commit message | `feat: publish WP-05E Failure Model and WP-05F Conformance baseline`         |
+| Branch         | `master`                                                                     |
+| Published at   | 2026-07-28 22:51:21 +0200                                                    |
 
 This commit is the **WP-05F Canonical Implementation Baseline** and the closing baseline for the WP-05 Chairman program. Subsequent work must start from published `master` HEAD. **Baseline Integrity Check (OPS-0002):** baseline document commit hash must equal published Git HEAD.
 
@@ -101,7 +101,7 @@ WP-07 config slice
 | TypeScript | Pass (`tsc --noEmit`)                                |
 | ESLint     | Pass                                                 |
 | Prettier   | Pass                                                 |
-| Tests      | Pass (full suite including WP-05F conformance)       |
+| Tests      | Pass (`394` / `394`, full suite including WP-05F conformance) |
 | OPS-0003   | Pass (publication integrity validator)               |
 | OPS-0002   | Pass (baseline hash == HEAD after publication amend) |
 

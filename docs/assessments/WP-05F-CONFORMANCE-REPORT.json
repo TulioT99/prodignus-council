@@ -82,8 +82,8 @@
     }
   ],
   "testSummary": {
-    "totalTests": 0,
-    "passed": 0,
+    "totalTests": 394,
+    "passed": 394,
     "failed": 0,
     "newConformanceTests": 11,
     "regressionStatus": "PASS"

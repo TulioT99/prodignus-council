@@ -50,12 +50,12 @@ verdict: PASS WITH OBSERVATIONS
 
 | Item           | Value                                                      |
 | -------------- | ---------------------------------------------------------- |
-| Commit hash    | `af8aa7d6e4bfdb6a2b9e753f7e308996349bfd95`                 |
+| Commit hash    | `9febe58a229722eabcc359a2e365a9be185fa2e5`                 |
 | Commit message | `feat: implement WP-05D Decision Policy Enforcement`       |
 | Branch         | `master`                                                   |
 | Published at   | 2026-07-28 20:29:43 +0200                                  |
 
-This commit is the **WP-05D Canonical Implementation Baseline**. Subsequent WP-05 slices (WP-05E–WP-05F) must start from the published `master` HEAD that carries this baseline (treat **git HEAD** as authoritative if a docs amend follows the stamped implementation hash).
+This commit is the **WP-05D Canonical Implementation Baseline**. **OPS-0002 note:** stamped hash equals authoritative published Git HEAD for WP-05D (`9febe58…`). A prior docs-amend dual-hash (`af8aa7d…`) is superseded. Subsequent WP-05 slices start from this HEAD.
 
 ## Architecture milestone progression
 

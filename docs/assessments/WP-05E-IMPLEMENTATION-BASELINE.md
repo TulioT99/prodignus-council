@@ -48,10 +48,10 @@ verdict: PASS WITH OBSERVATIONS
 
 | Item           | Value                                                                |
 | -------------- | -------------------------------------------------------------------- |
-| Commit hash    | `PENDING_PUBLICATION_HEAD`                                           |
+| Commit hash    | `6930cfa75d1a605432d6b3ea5dec063f9f633160`                           |
 | Commit message | `feat: publish WP-05E Failure Model and WP-05F Conformance baseline` |
 | Branch         | `master`                                                             |
-| Published at   | PENDING                                                              |
+| Published at   | 2026-07-28 22:51:21 +0200                                            |
 
 This commit is the **WP-05E Canonical Implementation Baseline**. Treat **git HEAD** as authoritative after the Baseline Integrity Check (OPS-0002).
 

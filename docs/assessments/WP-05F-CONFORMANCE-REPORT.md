@@ -97,7 +97,7 @@ Status vocabulary: `PASS` | `PASS WITH OBSERVATIONS` | `FAIL`
 | TypeScript                               | Pass                                     |
 | ESLint                                   | Pass                                     |
 | Prettier                                 | Pass                                     |
-| Automated tests                          | Pass (full suite including CT domains)   |
+| Automated tests                          | Pass (`394` / `394`, including CT-001…CT-010) |
 | OPS-0003 Publication Integrity Validator | Required at publication (PASS gate)      |
 | OPS-0002 Baseline Integrity Check        | Required at publication (`hash == HEAD`) |
 
