@@ -53,12 +53,13 @@ verdict: PASS WITH OBSERVATIONS
 
 | Item           | Value                                                                |
 | -------------- | -------------------------------------------------------------------- |
-| Commit hash    | `6930cfa75d1a605432d6b3ea5dec063f9f633160`                                   |
-| Commit message | `feat: publish WP-05E Failure Model and WP-05F Conformance baseline`         |
-| Branch         | `master`                                                                     |
-| Published at   | 2026-07-28 22:51:21 +0200                                                    |
+| Commit hash    | `6930cfa75d1a605432d6b3ea5dec063f9f633160`                           |
+| Commit message | `feat: publish WP-05E Failure Model and WP-05F Conformance baseline` |
+| Branch         | `master`                                                             |
+| Published at   | 2026-07-28 22:51:21 +0200                                            |
+| Integrity docs | `40681d28a478e9fc45c1896b6ed7fb5bc2a38444` (OPS-0002 hash stamp)     |
 
-This commit is the **WP-05F Canonical Implementation Baseline** and the closing baseline for the WP-05 Chairman program. Subsequent work must start from published `master` HEAD. **Baseline Integrity Check (OPS-0002):** baseline document commit hash must equal published Git HEAD.
+This commit (`6930cfa…`) is the **WP-05F Canonical Implementation Baseline**. OPS-0003 Publication Integrity Validator returned **PASS** when Git HEAD equaled this hash with the stamped baseline document (Baseline Integrity Check). A follow-up docs commit records the stamp without rewriting the implementation commit.
 
 ## Architecture milestone progression
 
