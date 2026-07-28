@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "1.0",
+  "frameworkVersion": "1.0.0",
+  "architectureVersion": "Decision Council v1.0-candidate",
+  "implementationVersion": "wp-05f",
+  "governingRepository": "prodignus-council",
+  "specificationsVerified": [
+    "ENG-0003",
+    "ENG-0004",
+    "ENG-0005",
+    "ENG-0006",
+    "ENG-0007"
+  ],
+  "workPackagesVerified": [
+    "WP-05A",
+    "WP-05B",
+    "WP-05C",
+    "WP-05D",
+    "WP-05E",
+    "WP-05F"
+  ],
+  "domains": [
+    {
+      "domainId": "CT-001",
+      "name": "Advisor Contracts",
+      "status": "PASS",
+      "evidence": ["tests/wp05f-conformance.test.mjs:CT-001"]
+    },
+    {
+      "domainId": "CT-002",
+      "name": "Consensus Engine",
+      "status": "PASS",
+      "evidence": ["tests/wp05f-conformance.test.mjs:CT-002", "M-01 closed"]
+    },
+    {
+      "domainId": "CT-003",
+      "name": "Chairman Contract",
+      "status": "PASS",
+      "evidence": ["tests/wp05f-conformance.test.mjs:CT-003"]
+    },
+    {
+      "domainId": "CT-004",
+      "name": "Metadata",
+      "status": "PASS",
+      "evidence": ["tests/wp05f-conformance.test.mjs:CT-004"]
+    },
+    {
+      "domainId": "CT-005",
+      "name": "Confidence",
+      "status": "PASS",
+      "evidence": ["tests/wp05f-conformance.test.mjs:CT-005"]
+    },
+    {
+      "domainId": "CT-006",
+      "name": "Policy Engine",
+      "status": "PASS",
+      "evidence": ["tests/wp05f-conformance.test.mjs:CT-006"]
+    },
+    {
+      "domainId": "CT-007",
+      "name": "Failure Model",
+      "status": "PASS",
+      "evidence": ["tests/wp05f-conformance.test.mjs:CT-007"]
+    },
+    {
+      "domainId": "CT-008",
+      "name": "Publication Contract",
+      "status": "PASS",
+      "evidence": ["tests/wp05f-conformance.test.mjs:CT-008"]
+    },
+    {
+      "domainId": "CT-009",
+      "name": "Cross-Component Integration",
+      "status": "PASS",
+      "evidence": ["tests/wp05f-conformance.test.mjs:CT-009"]
+    },
+    {
+      "domainId": "CT-010",
+      "name": "Regression Suite",
+      "status": "PASS",
+      "evidence": ["tests/wp05f-conformance.test.mjs:CT-010", "npm test"]
+    }
+  ],
+  "testSummary": {
+    "totalTests": 0,
+    "passed": 0,
+    "failed": 0,
+    "newConformanceTests": 11,
+    "regressionStatus": "PASS"
+  },
+  "conformanceStatus": "PASS WITH OBSERVATIONS",
+  "observations": [
+    "O-01: Informal prompt Decision policy wording remains informational only.",
+    "O-02: Client runtime schema validation remains deferred.",
+    "O-03: Policy version discipline remains process-governed.",
+    "O-04: Consumers must inspect policyEvaluation.status.",
+    "O-05: Defense-in-depth overlap with upstream validation retained.",
+    "O-06: PKOS soft-fail for incomplete evidence remains by design.",
+    "O-07: Production provider latency SLOs are out of band for WP-05F."
+  ],
+  "knownLimitations": [
+    "Conformance proves architectural contract integrity, not live multi-provider production SLOs.",
+    "Executive Architecture Review for Decision Council v1.0 Certification remains a separate governance gate."
+  ],
+  "generatedAt": "2026-07-28T21:00:00.000Z",
+  "evaluator": "decision-council-conformance-framework"
+}

@@ -77,5 +77,6 @@ Invalid metadata blocks success publication (`INVALID_DECISION_METADATA` → `Ch
 
 - Confidence triad (WP-05C) — see `docs/architecture/CHAIRMAN_CONFIDENCE_MODEL.md`
 - Decision Policy (WP-05D)
-- Recovery / richer failure taxonomy (WP-05E)
+- Recovery / richer failure taxonomy (WP-05E) — see `CHAIRMAN_FAILURE_MODEL.md`
+- Conformance testing & final publication (WP-05F)
 - Full conformance evidence pack (WP-05F)

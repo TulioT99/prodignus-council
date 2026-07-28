@@ -119,7 +119,10 @@ async function runCouncilSession(
 
   const chairmanStartedAt = Date.now();
   const chairman = runtime.chairman.enabled
-    ? await runChairman(decisionContext, advisorResults, { consensus })
+    ? await runChairman(decisionContext, advisorResults, {
+        consensus,
+        signal,
+      })
     : undefined;
   const chairmanDurationMs = chairman ? Date.now() - chairmanStartedAt : 0;
   const totalDurationMs = Date.now() - councilStartedAt;

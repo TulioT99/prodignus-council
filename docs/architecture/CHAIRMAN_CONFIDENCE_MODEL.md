@@ -114,5 +114,6 @@ Do not display only a single opaque percentage as the sole confidence signal.
 ## Out of scope (later WP-05 slices)
 
 - Decision Policy enforcement (WP-05D)
-- Failure model & recovery expansion (WP-05E)
+- Failure model & recovery — see `CHAIRMAN_FAILURE_MODEL.md` (WP-05E)
+- Conformance testing & final publication (WP-05F)
 - Conformance testing & final publication (WP-05F)

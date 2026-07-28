@@ -1,0 +1,29 @@
+{
+  "publicationType": "WP",
+  "repositoryName": "prodignus-council",
+  "baselineDocumentPath": "docs/assessments/WP-05D-IMPLEMENTATION-BASELINE.md",
+  "predecessorBaselinePath": "docs/assessments/WP-05C-IMPLEMENTATION-BASELINE.md",
+  "expectedPredecessorHash": "9a2c01823c8bd64e3252e19fd1e5c6bcf9e86c70",
+  "allowedPathPrefixes": [
+    "docs/",
+    "tools/publication-integrity-validator/",
+    "package.json",
+    "tests/publication-integrity-validator.test.mjs"
+  ],
+  "requiredNavigationPaths": ["docs/README.md", "docs/assessments/README.md"],
+  "requiredMetadataMarkers": [
+    "Commit hash",
+    "Published at",
+    "Governing specification",
+    "Executive Architecture Review",
+    "Validation summary"
+  ],
+  "requiredGovernanceReferences": ["ENG-0007", "OPS-0002"],
+  "runQualityGates": false,
+  "prettierTargets": [
+    "docs/ops",
+    "docs/assessments/README.md",
+    "docs/README.md",
+    "tools/publication-integrity-validator"
+  ]
+}

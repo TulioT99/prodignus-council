@@ -99,6 +99,6 @@ The Policy Engine never modifies reasoning artifacts.
 
 ## Out of scope (later WP-05 slices)
 
-- Failure recovery / retry strategies (WP-05E)
+- Conformance testing & final publication (WP-05F)
 - Conformance pack & final publication (WP-05F)
 - Human workflow / notification systems for escalation

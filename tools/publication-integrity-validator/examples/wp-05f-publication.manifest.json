@@ -1,0 +1,45 @@
+{
+  "publicationType": "WP",
+  "repositoryName": "prodignus-council",
+  "baselineDocumentPath": "docs/assessments/WP-05F-IMPLEMENTATION-BASELINE.md",
+  "predecessorBaselinePath": "docs/assessments/WP-05D-IMPLEMENTATION-BASELINE.md",
+  "expectedPredecessorHash": "9febe58a229722eabcc359a2e365a9be185fa2e5",
+  "allowedPathPrefixes": [
+    "docs/",
+    "src/",
+    "tests/",
+    "tools/",
+    "package.json",
+    "tsconfig.json"
+  ],
+  "requiredNavigationPaths": ["docs/README.md", "docs/assessments/README.md"],
+  "requiredMetadataMarkers": [
+    "Commit hash",
+    "Published at",
+    "Governing specification",
+    "Executive Architecture Review",
+    "Validation summary",
+    "OPS-0002",
+    "OPS-0003"
+  ],
+  "requiredGovernanceReferences": [
+    "ENG-0007",
+    "ENG-0003",
+    "OPS-0002",
+    "OPS-0003",
+    "WP-05E",
+    "WP-05F"
+  ],
+  "runQualityGates": false,
+  "prettierTargets": [
+    "docs/assessments/WP-05F-IMPLEMENTATION-BASELINE.md",
+    "docs/assessments/WP-05F-CONFORMANCE-REPORT.md",
+    "docs/assessments/WP-05E-IMPLEMENTATION-BASELINE.md",
+    "docs/architecture/CHAIRMAN_FAILURE_MODEL.md",
+    "docs/ops",
+    "docs/assessments/README.md",
+    "docs/README.md",
+    "tools/decision-council-conformance",
+    "tools/publication-integrity-validator"
+  ]
+}

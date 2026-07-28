@@ -4,23 +4,27 @@ All engineering documentation in this repository follows the [OPS-0001 — Engin
 
 ## Documentation Hierarchy
 
-| Type                                | Location             | Identifier pattern   | Purpose                                                   |
-| ----------------------------------- | -------------------- | -------------------- | --------------------------------------------------------- |
-| Operations                          | `docs/ops/`          | `OPS-NNNN-*`         | Engineering workflow, standards, and operating procedures |
-| Architecture Decision Records       | `docs/adr/`          | `ADR-NNNN-*`         | Architectural decisions and rationale                     |
-| Engineering Specifications          | `docs/eng/`          | `ENG-NNNN-*`         | Implementation contracts, interfaces, and invariants      |
-| Architecture Readiness Reviews      | `docs/arr/`          | `ARR-NNNN-*`         | Pre-implementation governance checkpoints                 |
-| Architecture Assessments            | `docs/assessments/`  | Descriptive filename | Historical read-only architecture baselines               |
-| Architecture (informative)          | `docs/architecture/` | Descriptive filename | Living architecture descriptions (non-ADR)                |
-| Implementation Plans                | `docs/imp/`          | `IMP-NNNN-*`         | Execution strategy and validation gates                   |
-| Architecture Implementation Reviews | `docs/air/`          | `AIR-NNNN-*`         | Post-implementation architectural compliance assessment   |
-| Implementation Completion Reports   | `docs/icr/`          | `ICR-NNNN-*`         | Implementation delivery certification                     |
+| Type                                | Location              | Identifier pattern   | Purpose                                                   |
+| ----------------------------------- | --------------------- | -------------------- | --------------------------------------------------------- |
+| Operations                          | `docs/ops/`           | `OPS-NNNN-*`         | Engineering workflow, standards, and operating procedures |
+| Publication Templates               | `docs/ops/templates/` | Descriptive filename | Reusable WP/ENG/ARR/OPS publication workflows             |
+| Architecture Decision Records       | `docs/adr/`           | `ADR-NNNN-*`         | Architectural decisions and rationale                     |
+| Engineering Specifications          | `docs/eng/`           | `ENG-NNNN-*`         | Implementation contracts, interfaces, and invariants      |
+| Architecture Readiness Reviews      | `docs/arr/`           | `ARR-NNNN-*`         | Pre-implementation governance checkpoints                 |
+| Architecture Assessments            | `docs/assessments/`   | Descriptive filename | Historical read-only architecture baselines               |
+| Architecture (informative)          | `docs/architecture/`  | Descriptive filename | Living architecture descriptions (non-ADR)                |
+| Implementation Plans                | `docs/imp/`           | `IMP-NNNN-*`         | Execution strategy and validation gates                   |
+| Architecture Implementation Reviews | `docs/air/`           | `AIR-NNNN-*`         | Post-implementation architectural compliance assessment   |
+| Implementation Completion Reports   | `docs/icr/`           | `ICR-NNNN-*`         | Implementation delivery certification                     |
 
 ## Operations
 
-| Document                                                  | Title                         | Status   |
-| --------------------------------------------------------- | ----------------------------- | -------- |
-| [OPS-0001](ops/OPS-0001-engineering-workflow-standard.md) | Engineering Workflow Standard | Approved |
+| Document                                                                  | Title                                               | Status      |
+| ------------------------------------------------------------------------- | --------------------------------------------------- | ----------- |
+| [OPS-0001](ops/OPS-0001-engineering-workflow-standard.md)                 | Engineering Workflow Standard                       | Approved    |
+| [OPS-0002](ops/OPS-0002-canonical-implementation-baseline-publication.md) | Canonical Implementation Baseline Publication       | Approved    |
+| [OPS-0003](ops/OPS-0003-publication-integrity-validator.md)               | Publication Integrity Validator                     | Implemented |
+| [Publication Templates](ops/templates/README.md)                          | Reusable WP / ENG / ARR / OPS publication templates | Approved    |
 
 ## Architecture Decision Records
 
@@ -46,14 +50,17 @@ All engineering documentation in this repository follows the [OPS-0001 — Engin
 
 ## Architecture Assessments
 
-| Document                                                                                               | Title                                                        | Status                                         |
-| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ---------------------------------------------- |
-| [decision-council-architecture-assessment.md](assessments/decision-council-architecture-assessment.md) | Decision Council Architecture Assessment                     | Historical (baseline `cc90061`)                |
-| [WP-04-IMPLEMENTATION-BASELINE.md](assessments/WP-04-IMPLEMENTATION-BASELINE.md)                       | WP-04 Canonical Implementation Baseline — Consensus Engine   | Published (Consensus Engine baseline)          |
-| [WP-05A-IMPLEMENTATION-BASELINE.md](assessments/WP-05A-IMPLEMENTATION-BASELINE.md)                     | WP-05A Canonical Implementation Baseline — Chairman Contract | Published (Chairman contract baseline)         |
-| [WP-05B-IMPLEMENTATION-BASELINE.md](assessments/WP-05B-IMPLEMENTATION-BASELINE.md)                     | WP-05B Canonical Implementation Baseline — Decision Metadata | Published (superseded by WP-05C)               |
-| [WP-05C-IMPLEMENTATION-BASELINE.md](assessments/WP-05C-IMPLEMENTATION-BASELINE.md)                     | WP-05C Canonical Implementation Baseline — Confidence Triad  | Published (superseded by WP-05D)               |
-| [WP-05D-IMPLEMENTATION-BASELINE.md](assessments/WP-05D-IMPLEMENTATION-BASELINE.md)                     | WP-05D Canonical Implementation Baseline — Decision Policy   | Published (current Decision Policy baseline)   |
+| Document                                                                                               | Title                                                        | Status                                            |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------- |
+| [decision-council-architecture-assessment.md](assessments/decision-council-architecture-assessment.md) | Decision Council Architecture Assessment                     | Historical (baseline `cc90061`)                   |
+| [WP-04-IMPLEMENTATION-BASELINE.md](assessments/WP-04-IMPLEMENTATION-BASELINE.md)                       | WP-04 Canonical Implementation Baseline — Consensus Engine   | Published (Consensus Engine baseline)             |
+| [WP-05A-IMPLEMENTATION-BASELINE.md](assessments/WP-05A-IMPLEMENTATION-BASELINE.md)                     | WP-05A Canonical Implementation Baseline — Chairman Contract | Published (Chairman contract baseline)            |
+| [WP-05B-IMPLEMENTATION-BASELINE.md](assessments/WP-05B-IMPLEMENTATION-BASELINE.md)                     | WP-05B Canonical Implementation Baseline — Decision Metadata | Published (superseded by WP-05C)                  |
+| [WP-05C-IMPLEMENTATION-BASELINE.md](assessments/WP-05C-IMPLEMENTATION-BASELINE.md)                     | WP-05C Canonical Implementation Baseline — Confidence Triad  | Published (superseded by WP-05D)                  |
+| [WP-05D-IMPLEMENTATION-BASELINE.md](assessments/WP-05D-IMPLEMENTATION-BASELINE.md)                     | WP-05D Canonical Implementation Baseline — Decision Policy   | Published (superseded by WP-05F closing baseline) |
+| [WP-05E-IMPLEMENTATION-BASELINE.md](assessments/WP-05E-IMPLEMENTATION-BASELINE.md)                     | WP-05E Canonical Implementation Baseline — Failure Model     | Published (co-published with WP-05F)              |
+| [WP-05F-CONFORMANCE-REPORT.md](assessments/WP-05F-CONFORMANCE-REPORT.md)                               | WP-05F Decision Council Conformance Report                   | Accepted — PASS WITH OBSERVATIONS                 |
+| [WP-05F-IMPLEMENTATION-BASELINE.md](assessments/WP-05F-IMPLEMENTATION-BASELINE.md)                     | WP-05F Canonical Implementation Baseline — Conformance       | Published (current WP-05 closing baseline)        |
 
 ## Architecture (informative)
 
@@ -64,6 +71,7 @@ All engineering documentation in this repository follows the [OPS-0001 — Engin
 | [CHAIRMAN_DECISION_METADATA.md](architecture/CHAIRMAN_DECISION_METADATA.md) | Chairman Decision Metadata & Traceability (WP-05B)             | Informative |
 | [CHAIRMAN_CONFIDENCE_MODEL.md](architecture/CHAIRMAN_CONFIDENCE_MODEL.md)   | Chairman Confidence Triad & Uncertainty (WP-05C)               | Informative |
 | [CHAIRMAN_DECISION_POLICY.md](architecture/CHAIRMAN_DECISION_POLICY.md)     | Chairman Decision Policy Enforcement (WP-05D)                  | Informative |
+| [CHAIRMAN_FAILURE_MODEL.md](architecture/CHAIRMAN_FAILURE_MODEL.md)         | Failure Model & Recovery Framework (WP-05E)                    | Informative |
 
 ## Implementation Plans
 

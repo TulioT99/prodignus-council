@@ -319,7 +319,7 @@ export type ChairmanFailureTraceability = {
 };
 
 /**
- * WP-05A contract / execution failure taxonomy (not the full WP-05E reason catalog).
+ * WP-05A contract / execution failure taxonomy (mapped onto WP-05E categories).
  */
 export type ChairmanFailureReasonCode =
   | "MISSING_CONSENSUS_PACKAGE"
@@ -338,6 +338,80 @@ export type ChairmanFailureReasonCode =
   | "CONTEXT_BUILD_ERROR"
   | "INTERNAL_ERROR";
 
+/**
+ * WP-05E Failure Model categories (execution resilience taxonomy).
+ */
+export type FailureCategory =
+  | "FM-001"
+  | "FM-002"
+  | "FM-003"
+  | "FM-004"
+  | "FM-005"
+  | "FM-006"
+  | "FM-007"
+  | "FM-008";
+
+export type FailureSeverity =
+  "INFO" | "WARNING" | "ERROR" | "CRITICAL" | "FATAL";
+
+export type FailureFallbackBehavior =
+  "fail_closed" | "isolate_and_continue" | "structured_failure";
+
+export type FailureRecoveryPolicy = {
+  readonly category: FailureCategory;
+  readonly description: string;
+  readonly retryable: boolean;
+  /** Maximum attempts including the initial try. */
+  readonly maxAttempts: number;
+  readonly fallbackBehavior: FailureFallbackBehavior;
+  readonly publicationEligible: boolean;
+  readonly userVisibleOutcome: string;
+  readonly defaultSeverity: FailureSeverity;
+};
+
+export type DecisionFailureDiagnostics = {
+  readonly message: string;
+  readonly failureReasonCode?: ChairmanFailureReasonCode;
+  readonly recoveryActions: readonly string[];
+  readonly durationMs?: number;
+  readonly failedComponent?: string;
+  readonly terminalStatus: "failed" | "isolated" | "degraded";
+};
+
+/**
+ * Structured failure artifact (WP-05E / ENG-0007 §13).
+ * Consumers always receive this instead of null / partial / uncaught errors.
+ */
+export type DecisionFailureReport = {
+  readonly schemaVersion: "1.0";
+  readonly executionId: string;
+  readonly timestamp: string;
+  readonly failureCategory: FailureCategory;
+  readonly severity: FailureSeverity;
+  readonly component: string;
+  readonly recoveryAttempted: boolean;
+  readonly recoverySucceeded: boolean;
+  readonly retryCount: number;
+  readonly publicationAllowed: false;
+  readonly diagnostics: DecisionFailureDiagnostics;
+  readonly relatedMetadata: {
+    readonly failureId?: string;
+    readonly consensusPackageId?: string;
+    readonly requestId?: string;
+    readonly sessionId?: string;
+    readonly governingSpecification: "ENG-0007";
+    readonly failureManager: "council-failure-manager";
+    readonly recoveryPolicyCategory: FailureCategory;
+    readonly recoveryFallback: FailureFallbackBehavior;
+  };
+};
+
+export type PublicationEligibilityDecision = {
+  readonly publicationAllowed: boolean;
+  readonly reason: string;
+  readonly failureCategory?: FailureCategory;
+  readonly severity?: FailureSeverity;
+};
 export type ChairmanRecommendationType =
   | "proceed"
   | "proceed_with_conditions"
@@ -537,6 +611,11 @@ export type ChairmanFailedResult = {
   executionId: string;
   /** Failure-path traceability — decisionAbsent is always true. */
   failureTraceability: ChairmanFailureTraceability;
+  /**
+   * WP-05E structured DecisionFailureReport — mandatory on ChairmanFailed.
+   * Always sets publicationAllowed=false (no silent publication).
+   */
+  failureReport: DecisionFailureReport;
   model: string;
   durationMs: number;
   totalTokens: number;

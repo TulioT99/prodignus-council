@@ -138,9 +138,9 @@ Capture architectural decisions.
 
 Answers:
 
-* Why?
-* Why this approach?
-* What alternatives were rejected?
+- Why?
+- Why this approach?
+- What alternatives were rejected?
 
 Output:
 
@@ -156,12 +156,12 @@ Describe the engineering implementation contract.
 
 Answers:
 
-* What shall be built?
-* Interfaces
-* Contracts
-* Invariants
-* Testing
-* Constraints
+- What shall be built?
+- Interfaces
+- Contracts
+- Invariants
+- Testing
+- Constraints
 
 Output:
 
@@ -177,16 +177,16 @@ Verify implementation readiness before coding begins.
 
 Answers:
 
-* Is the architecture complete?
-* Is the specification consistent?
-* Are interfaces unambiguous?
-* Are risks understood?
+- Is the architecture complete?
+- Is the specification consistent?
+- Are interfaces unambiguous?
+- Are risks understood?
 
 Possible outcomes:
 
-* PASS
-* PASS WITH RECOMMENDATIONS
-* FAIL
+- PASS
+- PASS WITH RECOMMENDATIONS
+- FAIL
 
 ---
 
@@ -198,12 +198,12 @@ Describe exactly how the implementation will be executed.
 
 Contents include:
 
-* implementation sequence;
-* file modifications;
-* validation gates;
-* rollback strategy;
-* deliverables;
-* Definition of Done.
+- implementation sequence;
+- file modifications;
+- validation gates;
+- rollback strategy;
+- deliverables;
+- Definition of Done.
 
 ---
 
@@ -215,22 +215,22 @@ Verify that the completed implementation conforms to the approved architecture.
 
 Answers:
 
-* Did the implementation faithfully realize the approved architecture?
-* Are architectural boundaries, coupling, and responsibilities preserved?
+- Did the implementation faithfully realize the approved architecture?
+- Are architectural boundaries, coupling, and responsibilities preserved?
 
 Focus:
 
-* compliance;
-* coupling;
-* responsibilities;
-* maintainability;
-* architectural integrity.
+- compliance;
+- coupling;
+- responsibilities;
+- maintainability;
+- architectural integrity.
 
 Possible outcomes:
 
-* APPROVED
-* APPROVED WITH MINOR OBSERVATIONS
-* REJECTED
+- APPROVED
+- APPROVED WITH MINOR OBSERVATIONS
+- REJECTED
 
 Output:
 
@@ -246,17 +246,17 @@ Certify that the implementation team delivered everything committed in the appro
 
 Answers:
 
-* Did the implementation team complete all mandatory deliverables?
-* Do tests, lint, and build evidence support merge readiness?
+- Did the implementation team complete all mandatory deliverables?
+- Do tests, lint, and build evidence support merge readiness?
 
 Contents include:
 
-* deliverable status;
-* files created and modified;
-* testing summary;
-* deferred items;
-* Definition of Done verification;
-* final implementation certification.
+- deliverable status;
+- files created and modified;
+- testing summary;
+- deferred items;
+- Definition of Done verification;
+- final implementation certification.
 
 Output:
 
@@ -272,11 +272,11 @@ Verify code quality and correctness.
 
 Focus:
 
-* readability;
-* correctness;
-* standards;
-* security;
-* maintainability.
+- readability;
+- correctness;
+- standards;
+- security;
+- maintainability.
 
 ---
 
@@ -288,10 +288,10 @@ Provide objective evidence that the implementation satisfies the engineering con
 
 Testing includes:
 
-* unit;
-* integration;
-* regression;
-* architectural invariants.
+- unit;
+- integration;
+- regression;
+- architectural invariants.
 
 ---
 
@@ -299,17 +299,17 @@ Testing includes:
 
 Every feature passes through formal decision gates.
 
-| Gate                | Required Outcome                  |
-| ------------------- | --------------------------------- |
-| ADR                 | Approved                          |
-| ENG                 | Complete                          |
-| ARR                 | PASS or PASS WITH RECOMMENDATIONS |
-| IMP                 | Approved                          |
-| AIR                 | APPROVED                          |
-| ICR                 | Published                         |
-| Code Review         | Approved                          |
-| Testing             | Passing                           |
-| Merge               | Authorized                        |
+| Gate        | Required Outcome                  |
+| ----------- | --------------------------------- |
+| ADR         | Approved                          |
+| ENG         | Complete                          |
+| ARR         | PASS or PASS WITH RECOMMENDATIONS |
+| IMP         | Approved                          |
+| AIR         | APPROVED                          |
+| ICR         | Published                         |
+| Code Review | Approved                          |
+| Testing     | Passing                           |
+| Merge       | Authorized                        |
 
 A FAIL at any gate blocks progression until resolved.
 
@@ -321,11 +321,11 @@ A FAIL at any gate blocks progression until resolved.
 
 Responsibilities:
 
-* define business objectives;
-* approve architecture;
-* make strategic decisions;
-* authorize implementation;
-* approve releases.
+- define business objectives;
+- approve architecture;
+- make strategic decisions;
+- authorize implementation;
+- approve releases.
 
 Authority:
 
@@ -337,14 +337,14 @@ Final decision maker.
 
 Responsibilities:
 
-* architectural design;
-* systems thinking;
-* engineering documentation;
-* specification development;
-* governance;
-* architecture reviews;
-* implementation planning;
-* executive technical review.
+- architectural design;
+- systems thinking;
+- engineering documentation;
+- specification development;
+- governance;
+- architecture reviews;
+- implementation planning;
+- executive technical review.
 
 ChatGPT does not modify production code directly.
 
@@ -354,12 +354,12 @@ ChatGPT does not modify production code directly.
 
 Responsibilities:
 
-* implement approved specifications;
-* maintain repository conventions;
-* execute implementation plans;
-* generate tests;
-* refactor code;
-* produce implementation reports.
+- implement approved specifications;
+- maintain repository conventions;
+- execute implementation plans;
+- generate tests;
+- refactor code;
+- produce implementation reports.
 
 Cursor shall not redesign architecture without approval.
 
@@ -369,10 +369,10 @@ Cursor shall not redesign architecture without approval.
 
 Responsibilities:
 
-* maintain source of truth;
-* preserve history;
-* provide traceability;
-* enforce version control.
+- maintain source of truth;
+- preserve history;
+- provide traceability;
+- enforce version control.
 
 ---
 
@@ -395,13 +395,13 @@ docs/
 
 Each artifact shall have:
 
-* unique identifier;
-* title;
-* status;
-* version;
-* author;
-* references;
-* revision history (when applicable).
+- unique identifier;
+- title;
+- status;
+- version;
+- author;
+- references;
+- revision history (when applicable).
 
 ---
 
@@ -431,12 +431,12 @@ Merge
 
 Every implementation should answer:
 
-* Which ADR authorized this change?
-* Which ENG defines it?
-* Which IMP governed execution?
-* Which tests verify it?
-* Which AIR certified architectural compliance?
-* Which ICR certified delivery completion?
+- Which ADR authorized this change?
+- Which ENG defines it?
+- Which IMP governed execution?
+- Which tests verify it?
+- Which AIR certified architectural compliance?
+- Which ICR certified delivery completion?
 
 ---
 
@@ -444,13 +444,13 @@ Every implementation should answer:
 
 Implementation may begin only when:
 
-* architecture approved;
-* engineering specification complete;
-* ARR passed;
-* implementation plan approved;
-* repository understood;
-* scope controlled;
-* dependencies identified.
+- architecture approved;
+- engineering specification complete;
+- ARR passed;
+- implementation plan approved;
+- repository understood;
+- scope controlled;
+- dependencies identified.
 
 ---
 
@@ -458,15 +458,15 @@ Implementation may begin only when:
 
 A feature is complete only when:
 
-* implementation finished;
-* architecture preserved;
-* documentation updated;
-* tests passing;
-* code reviewed;
-* AIR approved;
-* ICR published;
-* merge approved;
-* traceability maintained.
+- implementation finished;
+- architecture preserved;
+- documentation updated;
+- tests passing;
+- code reviewed;
+- AIR approved;
+- ICR published;
+- merge approved;
+- traceability maintained.
 
 Code completion alone is insufficient.
 
@@ -476,12 +476,12 @@ Code completion alone is insufficient.
 
 Engineering documentation shall be:
 
-* concise;
-* technically precise;
-* version controlled;
-* repository-aligned;
-* implementation-oriented;
-* free of speculative design.
+- concise;
+- technically precise;
+- version controlled;
+- repository-aligned;
+- implementation-oriented;
+- free of speculative design.
 
 Every document should answer one primary question.
 
@@ -510,15 +510,15 @@ If implementation reveals an architectural inconsistency:
 
 Engineering quality is measured by:
 
-* architectural clarity;
-* low coupling;
-* high cohesion;
-* deterministic behavior;
-* explicit contracts;
-* comprehensive testing;
-* maintainability;
-* extensibility;
-* operational simplicity.
+- architectural clarity;
+- low coupling;
+- high cohesion;
+- deterministic behavior;
+- explicit contracts;
+- comprehensive testing;
+- maintainability;
+- extensibility;
+- operational simplicity.
 
 Optimization is secondary to correctness.
 
@@ -547,11 +547,11 @@ The engineering workflow is itself an evolving system.
 
 After each significant implementation, the team should perform a retrospective to identify:
 
-* improvements to governance;
-* documentation refinements;
-* reusable patterns;
-* automation opportunities;
-* lessons learned.
+- improvements to governance;
+- documentation refinements;
+- reusable patterns;
+- automation opportunities;
+- lessons learned.
 
 Changes to this workflow shall be documented through new operational standards or updated versions of this document.
 
@@ -561,13 +561,13 @@ Changes to this workflow shall be documented through new operational standards o
 
 Prodignus engineering values:
 
-* thoughtful design over rapid coding;
-* clarity over cleverness;
-* evidence over opinion;
-* consistency over novelty;
-* incremental evolution over disruptive rewrites;
-* documentation as a first-class engineering artifact;
-* architecture as a long-term investment.
+- thoughtful design over rapid coding;
+- clarity over cleverness;
+- evidence over opinion;
+- consistency over novelty;
+- incremental evolution over disruptive rewrites;
+- documentation as a first-class engineering artifact;
+- architecture as a long-term investment.
 
 Technology choices may evolve.
 
@@ -583,22 +583,86 @@ Its objective is to make every important engineering decision understandable, re
 
 Every artifact contributes a distinct responsibility:
 
-* **ADR** explains **why** a decision exists.
-* **ENG** defines **what** must be built.
-* **ARR** determines whether the design is ready.
-* **IMP** defines **how** implementation will proceed.
-* **AIR** verifies architectural compliance of the completed implementation.
-* **ICR** certifies implementation delivery against the approved plan.
-* **Code Review** verifies implementation quality.
-* **Testing** provides objective evidence of correctness.
+- **ADR** explains **why** a decision exists.
+- **ENG** defines **what** must be built.
+- **ARR** determines whether the design is ready.
+- **IMP** defines **how** implementation will proceed.
+- **AIR** verifies architectural compliance of the completed implementation.
+- **ICR** certifies implementation delivery against the approved plan.
+- **Code Review** verifies implementation quality.
+- **Testing** provides objective evidence of correctness.
 
 Together, these artifacts form the engineering operating system for Prodignus, enabling a small team to build software with the rigor, traceability, and long-term maintainability expected of enterprise-scale platforms.
+
+---
+
+# 19. Canonical Implementation Baseline Publication
+
+When a work package, engineering artifact, or operational standard establishes a **Canonical Implementation Baseline**, publication shall follow [OPS-0002 — Canonical Implementation Baseline Publication Standard](./OPS-0002-canonical-implementation-baseline-publication.md).
+
+Mandatory publication lifecycle:
+
+```text
+Implementation Complete
+        ↓
+Executive Architecture Review
+        ↓
+Publication Preparation
+        ↓
+Publication Integrity Validator (OPS-0003)
+        ↓
+Publication Commit
+        ↓
+Push
+        ↓
+Canonical Implementation Baseline Established
+```
+
+## Baseline Integrity Check (mandatory)
+
+```text
+# Baseline Integrity Check
+
+Before creating the publication commit:
+
+• Generate the implementation baseline document.
+
+• Ensure the implementation commit hash recorded inside the
+  implementation baseline document matches the final published Git commit.
+
+If documentation updates require modifications after the baseline document
+is created, regenerate or update the baseline document before creating the
+final publication commit.
+
+The implementation baseline document and the published Git HEAD must always
+reference the same commit.
+
+No mismatch is permitted.
+```
+
+This check is automated by **OPS-0003 PV-007**. Manual publication remains obligated to satisfy it; tooling enforces it when the validator is run.
+
+Governance rule:
+
+```text
+Baseline Document Commit Hash
+             ==
+Published Git HEAD
+```
+
+Exactly one canonical implementation baseline per publication. No dual-hash publications are permitted.
+
+Reusable templates: [ops/templates/](./templates/README.md).  
+Validator: [OPS-0003 — Publication Integrity Validator](./OPS-0003-publication-integrity-validator.md).
 
 ---
 
 ## Related Documentation
 
 - [Documentation Index](../README.md)
+- [OPS-0002 — Canonical Implementation Baseline Publication Standard](./OPS-0002-canonical-implementation-baseline-publication.md)
+- [OPS-0003 — Publication Integrity Validator](./OPS-0003-publication-integrity-validator.md)
+- [Publication Templates](./templates/README.md)
 - [ADR-0003 — Collective Intelligence Layer](../adr/ADR-0003-collective-intelligence-layer.md)
 - [ENG-0002 — ChairmanContextBuilder Technical Specification](../eng/ENG-0002-chairman-context-builder-technical-specification.md)
 - [ARR-0001 — Architecture Readiness Review](../arr/ARR-0001-architecture-readiness-review.md)

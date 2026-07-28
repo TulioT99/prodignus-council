@@ -152,4 +152,14 @@ export function assertChairmanFailed(result) {
       "ChairmanFailed must include failureTraceability with decisionAbsent=true",
     );
   }
+
+  if (
+    !result.failureReport ||
+    result.failureReport.publicationAllowed !== false ||
+    result.failureReport.schemaVersion !== "1.0"
+  ) {
+    throw new Error(
+      "ChairmanFailed must include DecisionFailureReport with publicationAllowed=false",
+    );
+  }
 }

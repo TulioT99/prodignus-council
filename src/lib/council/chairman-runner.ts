@@ -31,6 +31,12 @@ import {
   toAdvisorSafeMessage,
 } from "@/lib/council/errors";
 import {
+  buildDecisionFailureReport,
+  evaluatePublicationGate,
+  getRecoveryPolicy,
+  runWithBoundedRecovery,
+} from "@/lib/council/failure-manager";
+import {
   callOpenRouter,
   resolveChairmanOpenRouterTimeoutMs,
 } from "@/lib/openrouter/client";
@@ -45,6 +51,7 @@ import type {
   ChairmanSuccessResult,
   DecisionConfidence,
   DecisionContext,
+  DecisionFailureReport,
   DecisionMetadata,
   DecisionPolicyResult,
   DecisionUncertainty,
@@ -57,6 +64,8 @@ const UNCONFIGURED_MODEL_LABEL = "Unconfigured model";
  */
 export type RunChairmanOptions = {
   readonly consensus: ConsensusPackage;
+  /** Optional parent cancellation signal (council/session abort). */
+  readonly signal?: AbortSignal;
 };
 
 function resolveModel(): string {
@@ -84,17 +93,41 @@ function createFailedChairmanResult(
     decisionContext?: DecisionContext | null;
     consensus?: ConsensusPackage | null;
     policyEvaluation?: DecisionPolicyResult;
+    recoveryAttempted?: boolean;
+    recoverySucceeded?: boolean;
+    retryCount?: number;
+    recoveryActions?: readonly string[];
   } = {},
 ): ChairmanFailedResult {
+  const failureTraceability = buildChairmanFailureTraceability({
+    executionId,
+    decisionContext: options.decisionContext,
+    consensus: options.consensus,
+  });
+
+  const failureReport: DecisionFailureReport = buildDecisionFailureReport({
+    executionId,
+    failureReasonCode,
+    message: errorMessage,
+    recoveryAttempted: options.recoveryAttempted,
+    recoverySucceeded: options.recoverySucceeded,
+    retryCount: options.retryCount,
+    recoveryActions: options.recoveryActions,
+    durationMs: options.durationMs,
+    relatedMetadata: {
+      failureId: failureTraceability.failureId,
+      consensusPackageId: failureTraceability.consensusPackageId,
+      requestId: failureTraceability.requestId,
+      sessionId: failureTraceability.sessionId,
+    },
+  });
+
   return {
     status: "failed",
     outcome: "ChairmanFailed",
     executionId,
-    failureTraceability: buildChairmanFailureTraceability({
-      executionId,
-      decisionContext: options.decisionContext,
-      consensus: options.consensus,
-    }),
+    failureTraceability,
+    failureReport,
     model: options.model ?? UNCONFIGURED_MODEL_LABEL,
     durationMs: options.durationMs ?? 0,
     totalTokens: 0,
@@ -198,12 +231,14 @@ function logChairmanExecution(entry: {
 /**
  * Run the Chairman Decision Engine.
  *
- * Pipeline gate (WP-05A / WP-05B / WP-05C / WP-05D):
+ * Pipeline gate (WP-05A / WP-05B / WP-05C / WP-05D / WP-05E):
  * Consensus Package → Contract Validation → Chairman synthesis →
- * Metadata validation → Confidence Triad validation → Decision Policy evaluation
+ * Metadata validation → Confidence Triad validation → Decision Policy evaluation →
+ * Failure Evaluation → Publication
  *
- * Invalid contracts, metadata, confidence, or rejected policy fail closed as
- * `ChairmanFailed` before successful publication.
+ * Invalid contracts, metadata, confidence, rejected policy, or terminal failures
+ * fail closed as `ChairmanFailed` with a structured DecisionFailureReport
+ * before successful publication.
  */
 export async function runChairman(
   decisionContext: DecisionContext,
@@ -338,20 +373,46 @@ export async function runChairman(
     return failed;
   }
 
-  try {
-    const completion = await callOpenRouter({
-      model,
-      systemPrompt,
-      userPrompt,
-      temperature: runtime.openRouter.defaultTemperature,
-      timeoutMs: resolveChairmanOpenRouterTimeoutMs(),
-      executionContext: {
-        caller: "chairman",
-        executionId: decisionContext.executionId,
-      },
-    });
+  const schemaRecoveryPolicy = getRecoveryPolicy("FM-004");
 
-    const content = parseChairmanResponseContent(completion.content);
+  try {
+    const synthesisRecovery = await runWithBoundedRecovery(
+      "FM-004",
+      async () => {
+        const completion = await callOpenRouter({
+          model,
+          systemPrompt,
+          userPrompt,
+          temperature: runtime.openRouter.defaultTemperature,
+          timeoutMs: resolveChairmanOpenRouterTimeoutMs(),
+          signal: options.signal,
+          executionContext: {
+            caller: "chairman",
+            executionId: decisionContext.executionId,
+          },
+        });
+
+        const content = parseChairmanResponseContent(completion.content);
+        return { completion, content };
+      },
+      {
+        maxAttempts: schemaRecoveryPolicy.maxAttempts,
+        isRetryableError: (error) => error instanceof InvalidModelOutputError,
+        onRetry: () => {
+          console.info(
+            `[Council] Chairman schema recovery retry: executionId=${decisionContext.executionId}`,
+          );
+        },
+      },
+    );
+
+    if (!synthesisRecovery.ok) {
+      throw synthesisRecovery.error;
+    }
+
+    const { completion, content } = synthesisRecovery.value;
+    const providerRetryCount = completion.retryCount;
+    const schemaRecoveryActions = synthesisRecovery.recoveryActions;
 
     const metadata = buildDecisionMetadata({
       decisionContext,
@@ -372,6 +433,11 @@ export async function runChairman(
           model: completion.model,
           decisionContext,
           consensus,
+          durationMs: completion.durationMs,
+          retryCount: providerRetryCount,
+          recoveryAttempted:
+            providerRetryCount > 0 || synthesisRecovery.recoveryAttempted,
+          recoveryActions: schemaRecoveryActions,
         },
       );
 
@@ -383,6 +449,7 @@ export async function runChairman(
         executionId: decisionContext.executionId,
         errorCategory: "INVALID_DECISION_METADATA",
         successfulAdvisorCount,
+        retryCount: providerRetryCount,
       });
 
       return failed;
@@ -413,6 +480,11 @@ export async function runChairman(
           model: completion.model,
           decisionContext,
           consensus,
+          durationMs: completion.durationMs,
+          retryCount: providerRetryCount,
+          recoveryAttempted:
+            providerRetryCount > 0 || synthesisRecovery.recoveryAttempted,
+          recoveryActions: schemaRecoveryActions,
         },
       );
 
@@ -424,6 +496,7 @@ export async function runChairman(
         executionId: decisionContext.executionId,
         errorCategory: "INVALID_DECISION_CONFIDENCE",
         successfulAdvisorCount,
+        retryCount: providerRetryCount,
       });
 
       return failed;
@@ -457,6 +530,11 @@ export async function runChairman(
           decisionContext,
           consensus,
           policyEvaluation: policyGate.policyEvaluation,
+          durationMs: completion.durationMs,
+          retryCount: providerRetryCount,
+          recoveryAttempted:
+            providerRetryCount > 0 || synthesisRecovery.recoveryAttempted,
+          recoveryActions: schemaRecoveryActions,
         },
       );
 
@@ -468,24 +546,67 @@ export async function runChairman(
         executionId: decisionContext.executionId,
         errorCategory: failureReasonCode,
         successfulAdvisorCount,
+        retryCount: providerRetryCount,
       });
 
       return failed;
     }
 
-    logChairmanExecution({
-      status: "success",
-      model: completion.model,
-      latencyMs: completion.durationMs,
+    const publicationGate = evaluatePublicationGate({
+      kind: "success_candidate",
       executionId: decisionContext.executionId,
-      promptTokens: completion.promptTokens,
-      completionTokens: completion.completionTokens,
-      totalTokens: completion.totalTokens,
-      retryCount: completion.retryCount,
-      successfulAdvisorCount,
+      hasMetadata: Boolean(metadataValidation.metadata),
+      hasConfidence: Boolean(confidenceValidation.decisionConfidence),
+      hasUncertainty: Boolean(confidenceValidation.uncertainty),
+      hasPolicyEvaluation: Boolean(policyGate.policyEvaluation),
+      policyStatus: policyGate.policyEvaluation.status,
     });
 
-    return createSuccessfulChairmanResult(
+    if (!publicationGate.publicationAllowed) {
+      const failureReasonCode: ChairmanFailureReasonCode =
+        publicationGate.failureCategory === "FM-005"
+          ? "INVALID_DECISION_METADATA"
+          : publicationGate.failureCategory === "FM-006"
+            ? "INVALID_DECISION_CONFIDENCE"
+            : publicationGate.failureCategory === "FM-007"
+              ? "INVALID_DECISION_POLICY"
+              : "INTERNAL_ERROR";
+
+      const failed = createFailedChairmanResult(
+        decisionContext.executionId,
+        publicationGate.reason,
+        failureReasonCode,
+        {
+          model: completion.model,
+          decisionContext,
+          consensus,
+          policyEvaluation: policyGate.policyEvaluation,
+          durationMs: completion.durationMs,
+          retryCount: providerRetryCount,
+          recoveryAttempted:
+            providerRetryCount > 0 || synthesisRecovery.recoveryAttempted,
+          recoveryActions: [
+            ...schemaRecoveryActions,
+            "failure_evaluation_blocked_publication",
+          ],
+        },
+      );
+
+      logChairmanExecution({
+        status: "failed",
+        outcome: "ChairmanFailed",
+        model: completion.model,
+        latencyMs: completion.durationMs,
+        executionId: decisionContext.executionId,
+        errorCategory: failureReasonCode,
+        successfulAdvisorCount,
+        retryCount: providerRetryCount,
+      });
+
+      return failed;
+    }
+
+    const successResult = createSuccessfulChairmanResult(
       decisionContext.executionId,
       content,
       completion.model,
@@ -504,9 +625,65 @@ export async function runChairman(
         reducedConfidenceSynthesis,
       },
     );
+
+    const serializationGate = evaluatePublicationGate({
+      kind: "publication_artifact",
+      executionId: decisionContext.executionId,
+      serialize: () => JSON.stringify(successResult),
+    });
+
+    if (!serializationGate.publicationAllowed) {
+      const failed = createFailedChairmanResult(
+        decisionContext.executionId,
+        serializationGate.reason,
+        "INTERNAL_ERROR",
+        {
+          model: completion.model,
+          decisionContext,
+          consensus,
+          durationMs: completion.durationMs,
+          retryCount: providerRetryCount,
+          recoveryAttempted:
+            providerRetryCount > 0 || synthesisRecovery.recoveryAttempted,
+          recoveryActions: [
+            ...schemaRecoveryActions,
+            "publication_serialization_failed",
+          ],
+        },
+      );
+
+      logChairmanExecution({
+        status: "failed",
+        outcome: "ChairmanFailed",
+        model: completion.model,
+        latencyMs: completion.durationMs,
+        executionId: decisionContext.executionId,
+        errorCategory: "INTERNAL_ERROR",
+        successfulAdvisorCount,
+        retryCount: providerRetryCount,
+      });
+
+      return failed;
+    }
+
+    logChairmanExecution({
+      status: "success",
+      model: completion.model,
+      latencyMs: completion.durationMs,
+      executionId: decisionContext.executionId,
+      promptTokens: completion.promptTokens,
+      completionTokens: completion.completionTokens,
+      totalTokens: completion.totalTokens,
+      retryCount: providerRetryCount + (synthesisRecovery.attempts - 1),
+      successfulAdvisorCount,
+    });
+
+    return successResult;
   } catch (error) {
     let errorCategory: ChairmanFailureReasonCode = "INTERNAL_ERROR";
     let safeMessage = toAdvisorSafeMessage(error);
+    let recoveryAttempted = false;
+    let recoveryActions: readonly string[] = [];
 
     if (error instanceof OpenRouterClientError) {
       errorCategory =
@@ -517,9 +694,18 @@ export async function runChairman(
         error.code === "CONFIGURATION_ERROR"
           ? "The Chairman model is not configured on the server."
           : error.message;
+      recoveryAttempted = errorCategory === "PROVIDER_ERROR";
+      recoveryActions =
+        errorCategory === "PROVIDER_ERROR"
+          ? Object.freeze(["provider_retry_budget_exhausted"])
+          : Object.freeze([]);
     } else if (error instanceof InvalidModelOutputError) {
       errorCategory = "INVALID_MODEL_OUTPUT";
       safeMessage = error.safeMessage;
+      recoveryAttempted = true;
+      recoveryActions = Object.freeze([
+        `retry:FM-004:exhausted_after_${schemaRecoveryPolicy.maxAttempts}`,
+      ]);
     } else if (error instanceof CouncilConfigurationError) {
       errorCategory = "CONFIGURATION_ERROR";
       safeMessage = toAdvisorSafeMessage(error);
@@ -547,6 +733,13 @@ export async function runChairman(
         model,
         decisionContext,
         consensus,
+        recoveryAttempted,
+        recoverySucceeded: false,
+        retryCount:
+          error instanceof InvalidModelOutputError
+            ? Math.max(0, schemaRecoveryPolicy.maxAttempts - 1)
+            : 0,
+        recoveryActions,
       },
     );
   }
