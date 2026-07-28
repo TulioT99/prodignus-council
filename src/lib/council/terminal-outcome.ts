@@ -17,7 +17,8 @@ function deriveFailedReasonCode(
   minimumSuccessfulAdvisors: number,
 ): CouncilTerminalReasonCode {
   const successfulCount = countSuccessfulAdvisors(advisors);
-  const chairmanInsufficient = chairman?.insufficientCouncil === true;
+  const chairmanInsufficient =
+    chairman?.status === "failed" && chairman.insufficientCouncil === true;
 
   if (successfulCount < minimumSuccessfulAdvisors || chairmanInsufficient) {
     return "INSUFFICIENT_ADVISOR_PARTICIPATION";

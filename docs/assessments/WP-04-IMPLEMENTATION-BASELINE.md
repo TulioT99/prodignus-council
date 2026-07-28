@@ -57,11 +57,9 @@ This commit is the **WP-04 Canonical Implementation Baseline**. All subsequent D
 ```text
 WP-07 config slice
     → WP-03 Advisor Reliability (d76ee12)
-        → WP-04 Consensus Engine  ← CURRENT BASELINE
-            → WP-05 Chairman Enhancement
-            → WP-06 PKOS Validation
-            → WP-07 Observability Slice
-            → WP-08 Production Readiness
+        → WP-04 Consensus Engine (3146af8)  ← Consensus Engine baseline
+            → WP-05A Chairman Contract  ← CURRENT Chairman Decision Engine contract baseline
+                → WP-05B–F / WP-06 / WP-07 obs / WP-08
 ```
 
 ## Governance confirmation
@@ -70,11 +68,10 @@ WP-07 config slice
 - Executive Architecture Review accepted (PASS WITH OBSERVATIONS)
 - ENG-0006 implemented as the Consensus Engine contract
 - Deterministic, non-generative consensus is part of the production architecture
+- Succeeded for Chairman Decision Engine contracts by WP-05A (see `WP-05A-IMPLEMENTATION-BASELINE.md`)
 - Future packages must not modify this baseline except through governed WPs
 
 ## Mandatory starting point for
 
-- WP-05 — Chairman Enhancement
-- WP-06 — PKOS Validation
-- WP-07 — Observability Slice
-- WP-08 — Production Readiness
+- Consensus Engine consumers and ENG-0006 regressions
+- Historical predecessor for WP-05A+

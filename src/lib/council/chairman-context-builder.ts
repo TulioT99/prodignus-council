@@ -88,6 +88,13 @@ function validateInput(input: ChairmanContextBuildInput | undefined): void {
       "Advisor results are required to build Chairman context.",
     );
   }
+
+  if (!input.consensus) {
+    throw new ChairmanContextBuildError(
+      "MISSING_CONSENSUS_PACKAGE",
+      "A published Consensus Package is required to build Chairman context.",
+    );
+  }
 }
 
 export class DefaultChairmanContextBuilder implements ChairmanContextBuilder {
@@ -106,25 +113,23 @@ export class DefaultChairmanContextBuilder implements ChairmanContextBuilder {
       advisors.map((advisor) => mapAdvisor(advisor)),
     );
 
-    const collectiveIntelligence = consensus
-      ? Object.freeze({
-          consensus,
-          conflicts: consensus.disagreementMap,
-          evidence: consensus.evidenceCoverage,
-          confidence: consensus.confidence,
-          openQuestions: consensus.openQuestions,
-          extensions: Object.freeze({
-            agreementMap: consensus.agreementMap,
-            minorityPositions: consensus.minorityPositions,
-            unresolvedConflicts: consensus.unresolvedConflicts,
-            participatingAdvisors: consensus.participatingAdvisors,
-            excludedAdvisors: consensus.excludedAdvisors,
-            consensusRationale: consensus.consensusRationale,
-            consensusStatus: consensus.status,
-            consensusMetadata: consensus.metadata,
-          }),
-        })
-      : Object.freeze({});
+    const collectiveIntelligence = Object.freeze({
+      consensus,
+      conflicts: consensus.disagreementMap,
+      evidence: consensus.evidenceCoverage,
+      confidence: consensus.confidence,
+      openQuestions: consensus.openQuestions,
+      extensions: Object.freeze({
+        agreementMap: consensus.agreementMap,
+        minorityPositions: consensus.minorityPositions,
+        unresolvedConflicts: consensus.unresolvedConflicts,
+        participatingAdvisors: consensus.participatingAdvisors,
+        excludedAdvisors: consensus.excludedAdvisors,
+        consensusRationale: consensus.consensusRationale,
+        consensusStatus: consensus.status,
+        consensusMetadata: consensus.metadata,
+      }),
+    });
 
     return Object.freeze({
       schemaVersion: "1.0",

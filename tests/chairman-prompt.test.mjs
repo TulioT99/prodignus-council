@@ -4,6 +4,7 @@ import test from "node:test";
 import { defaultChairmanContextBuilder } from "../src/lib/council/chairman-context-builder.ts";
 import { buildChairmanPrompts } from "../src/lib/council/chairman-prompt.ts";
 import { createDecisionContext } from "../src/lib/council/decision-context.ts";
+import { buildTestConsensusPackage } from "./chairman-test-helpers.mjs";
 
 const decision = {
   id: "DEC-20260720-001",
@@ -35,7 +36,8 @@ const successfulAdvisor = {
   analysis: [
     {
       title: "Citizen need",
-      description: "Upload support must map to document verification, not general media sharing.",
+      description:
+        "Upload support must map to document verification, not general media sharing.",
     },
   ],
   assumptions: ["Storage can be bounded per journey."],
@@ -74,28 +76,40 @@ const failedAdvisor = {
   errorMessage: "The model provider did not respond within the allowed time.",
 };
 
-function buildContext(advisors, decisionContextOptions = {}) {
+async function buildContext(advisors, decisionContextOptions = {}) {
   const decisionContext = createDecisionContext(decision, {
     executionId: "EXEC-SHARED-001",
     ...decisionContextOptions,
   });
 
-  return defaultChairmanContextBuilder.build({ decisionContext, advisors });
+  return defaultChairmanContextBuilder.build({
+    decisionContext,
+    advisors,
+    consensus: await buildTestConsensusPackage({
+      executionId: "EXEC-SHARED-001",
+      advisors,
+    }),
+  });
 }
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-test("TC-015: user prompt superset equivalence preserves legacy Chairman payload", () => {
+test("TC-015: user prompt superset equivalence preserves legacy Chairman payload", async () => {
   const advisorWithEnrichment = {
     ...successfulAdvisor,
     technicalAlternatives: ["Manual document intake"],
     unknowns: ["Peak upload volume"],
   };
-  const chairmanContext = buildContext([advisorWithEnrichment, failedAdvisor], {
-    attachments: [{ id: "att-1", name: "policy.pdf", mimeType: "application/pdf" }],
-  });
+  const chairmanContext = await buildContext(
+    [advisorWithEnrichment, failedAdvisor],
+    {
+      attachments: [
+        { id: "att-1", name: "policy.pdf", mimeType: "application/pdf" },
+      ],
+    },
+  );
   const { userPrompt } = buildChairmanPrompts(chairmanContext);
 
   const legacyDecisionMaterial = [
@@ -137,10 +151,12 @@ test("TC-015: user prompt superset equivalence preserves legacy Chairman payload
 
   assert.match(userPrompt, /Technical Alternatives: Manual document intake/);
   assert.match(userPrompt, /Unknowns: Peak upload volume/);
+  assert.match(userPrompt, /SYSTEM BOUNDARY: CONSENSUS PACKAGE/);
+  assert.doesNotMatch(userPrompt, /No consensus package published/);
 });
 
-test("TC-011: buildChairmanPrompts receives ChairmanContext", () => {
-  const chairmanContext = buildContext([successfulAdvisor]);
+test("TC-011: buildChairmanPrompts receives ChairmanContext", async () => {
+  const chairmanContext = await buildContext([successfulAdvisor]);
   const { userPrompt } = buildChairmanPrompts(chairmanContext);
 
   assert.match(userPrompt, /Execution ID: EXEC-SHARED-001/);
@@ -148,46 +164,62 @@ test("TC-011: buildChairmanPrompts receives ChairmanContext", () => {
   assert.match(userPrompt, /Language: en/);
 });
 
-test("buildChairmanPrompts includes successful advisor outputs with shared execution ID", () => {
-  const { userPrompt } = buildChairmanPrompts(buildContext([successfulAdvisor]));
+test("buildChairmanPrompts includes successful advisor outputs with shared execution ID", async () => {
+  const { userPrompt } = buildChairmanPrompts(
+    await buildContext([successfulAdvisor]),
+  );
 
-  assert.match(userPrompt, /Image upload should be scoped to document evidence needs/);
+  assert.match(
+    userPrompt,
+    /Image upload should be scoped to document evidence needs/,
+  );
   assert.match(userPrompt, /Execution ID: EXEC-SHARED-001/);
 });
 
-test("TC-012: optional advisor fields reach serialization", () => {
+test("TC-012: optional advisor fields reach serialization", async () => {
   const advisorWithOptionalFields = {
     ...successfulAdvisor,
     technicalAlternatives: ["Manual document intake"],
     unknowns: ["Peak upload volume"],
   };
-  const { userPrompt } = buildChairmanPrompts(buildContext([advisorWithOptionalFields]));
+  const { userPrompt } = buildChairmanPrompts(
+    await buildContext([advisorWithOptionalFields]),
+  );
 
   assert.match(userPrompt, /Technical Alternatives: Manual document intake/);
-  assert.match(userPrompt, /Key Arguments: Scope uploads to verification use cases only./);
+  assert.match(
+    userPrompt,
+    /Key Arguments: Scope uploads to verification use cases only./,
+  );
   assert.match(userPrompt, /Unknowns: Peak upload volume/);
 });
 
-test("buildChairmanPrompts includes advisor failures", () => {
-  const { userPrompt } = buildChairmanPrompts(buildContext([failedAdvisor]));
+test("buildChairmanPrompts includes advisor failures", async () => {
+  const { userPrompt } = buildChairmanPrompts(
+    await buildContext([failedAdvisor]),
+  );
 
   assert.match(userPrompt, /Failed advisors \(1\)/);
   assert.match(userPrompt, /The Contrarian/);
   assert.match(userPrompt, /did not respond within the allowed time/);
 });
 
-test("TC-019: buildChairmanPrompts instructs against vote counting", () => {
-  const { systemPrompt } = buildChairmanPrompts(buildContext([successfulAdvisor]));
+test("TC-019: buildChairmanPrompts instructs against vote counting", async () => {
+  const { systemPrompt } = buildChairmanPrompts(
+    await buildContext([successfulAdvisor]),
+  );
 
   assert.match(systemPrompt, /vote counts/i);
 });
 
-test("TC-013: structured data does not serialize as [object Object]", () => {
+test("TC-013: structured data does not serialize as [object Object]", async () => {
   const advisorWithExtension = {
     ...successfulAdvisor,
     experimentalField: { enabled: true, version: 1 },
   };
-  const { userPrompt } = buildChairmanPrompts(buildContext([advisorWithExtension]));
+  const { userPrompt } = buildChairmanPrompts(
+    await buildContext([advisorWithExtension]),
+  );
 
   assert.doesNotMatch(userPrompt, /\[object Object\]/);
   assert.match(userPrompt, /"enabled":true/);

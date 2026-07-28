@@ -46,9 +46,11 @@ All engineering documentation in this repository follows the [OPS-0001 — Engin
 
 ## Architecture Assessments
 
-| Document                                                                                               | Title                                    | Status                          |
-| ------------------------------------------------------------------------------------------------------ | ---------------------------------------- | ------------------------------- |
-| [decision-council-architecture-assessment.md](assessments/decision-council-architecture-assessment.md) | Decision Council Architecture Assessment | Historical (baseline `cc90061`) |
+| Document                                                                                               | Title                                                        | Status                                         |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ---------------------------------------------- |
+| [decision-council-architecture-assessment.md](assessments/decision-council-architecture-assessment.md) | Decision Council Architecture Assessment                     | Historical (baseline `cc90061`)                |
+| [WP-04-IMPLEMENTATION-BASELINE.md](assessments/WP-04-IMPLEMENTATION-BASELINE.md)                       | WP-04 Canonical Implementation Baseline — Consensus Engine   | Published (Consensus Engine baseline)          |
+| [WP-05A-IMPLEMENTATION-BASELINE.md](assessments/WP-05A-IMPLEMENTATION-BASELINE.md)                     | WP-05A Canonical Implementation Baseline — Chairman Contract | Published (current Chairman contract baseline) |
 
 ## Architecture (informative)
 

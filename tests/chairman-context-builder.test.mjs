@@ -4,6 +4,7 @@ import test from "node:test";
 import { DefaultChairmanContextBuilder } from "../src/lib/council/chairman-context-builder.ts";
 import { ChairmanContextBuildError } from "../src/lib/council/chairman-context.errors.ts";
 import { createDecisionContext } from "../src/lib/council/decision-context.ts";
+import { buildTestConsensusPackage } from "./chairman-test-helpers.mjs";
 
 const fixedClock = {
   now: () => "2026-07-21T09:00:00.000Z",
@@ -107,23 +108,30 @@ const failedAdvisorResult = {
   errorMessage: "The model provider did not respond within the allowed time.",
 };
 
-function createInput(advisors, options = {}, consensus) {
+async function createInput(advisors, options = {}, consensus) {
+  const decisionContext = createDecisionContext(decision, {
+    executionId: "EXEC-SHARED-001",
+    attachments: [
+      { id: "att-1", name: "policy.pdf", mimeType: "application/pdf" },
+    ],
+    ...options,
+  });
+
   return {
-    decisionContext: createDecisionContext(decision, {
-      executionId: "EXEC-SHARED-001",
-      attachments: [
-        { id: "att-1", name: "policy.pdf", mimeType: "application/pdf" },
-      ],
-      ...options,
-    }),
+    decisionContext,
     advisors,
-    ...(consensus ? { consensus } : {}),
+    consensus:
+      consensus ??
+      (await buildTestConsensusPackage({
+        executionId: "EXEC-SHARED-001",
+        advisors,
+      })),
   };
 }
 
-test("TC-001: builds valid Chairman context", () => {
+test("TC-001: builds valid Chairman context with mandatory Consensus Package", async () => {
   const builder = new DefaultChairmanContextBuilder(fixedClock);
-  const input = createInput([
+  const input = await createInput([
     contrarianAdvisorResult,
     deliveryEngineeringAdvisorResult,
   ]);
@@ -133,8 +141,8 @@ test("TC-001: builds valid Chairman context", () => {
   assert.equal(context.request.question, decision.question);
   assert.equal(context.advisors.length, 2);
   assert.equal(context.metadata.advisorCount, 2);
-  // Without a published consensus package, CI remains an empty stub (backward compatible).
-  assert.deepEqual(context.collectiveIntelligence, {});
+  assert.equal(context.collectiveIntelligence.consensus, input.consensus);
+  assert.ok(context.collectiveIntelligence.confidence);
 });
 
 test("TC-001b: embeds published consensus package into collectiveIntelligence", async () => {
@@ -148,7 +156,7 @@ test("TC-001b: embeds published consensus package into collectiveIntelligence", 
     expectedAdvisorIds: ["ADV-001", "ADV-004"],
     minimumEligibleAdvisors: 2,
   });
-  const context = builder.build(createInput(advisors, {}, consensus));
+  const context = builder.build(await createInput(advisors, {}, consensus));
 
   assert.equal(context.collectiveIntelligence.consensus, consensus);
   assert.equal(
@@ -158,10 +166,27 @@ test("TC-001b: embeds published consensus package into collectiveIntelligence", 
   assert.ok(Array.isArray(context.collectiveIntelligence.conflicts));
 });
 
-test("TC-002: preserves complete AdvisorResult", () => {
+test("TC-001c: rejects missing Consensus Package", async () => {
+  const builder = new DefaultChairmanContextBuilder(fixedClock);
+
+  assert.throws(
+    () =>
+      builder.build({
+        decisionContext: createDecisionContext(decision, {
+          executionId: "EXEC-SHARED-001",
+        }),
+        advisors: [deliveryEngineeringAdvisorResult],
+      }),
+    (error) =>
+      error instanceof ChairmanContextBuildError &&
+      error.code === "MISSING_CONSENSUS_PACKAGE",
+  );
+});
+
+test("TC-002: preserves complete AdvisorResult", async () => {
   const builder = new DefaultChairmanContextBuilder(fixedClock);
   const context = builder.build(
-    createInput([deliveryEngineeringAdvisorResult]),
+    await createInput([deliveryEngineeringAdvisorResult]),
   );
   const result = context.advisors[0].result;
 
@@ -175,13 +200,13 @@ test("TC-002: preserves complete AdvisorResult", () => {
   ]);
 });
 
-test("TC-003: preserves unknown future fields", () => {
+test("TC-003: preserves unknown future fields", async () => {
   const builder = new DefaultChairmanContextBuilder(fixedClock);
   const extendedResult = {
     ...deliveryEngineeringAdvisorResult,
     experimentalField: { enabled: true, version: 1 },
   };
-  const context = builder.build(createInput([extendedResult]));
+  const context = builder.build(await createInput([extendedResult]));
 
   assert.deepEqual(context.advisors[0].result.experimentalField, {
     enabled: true,
@@ -189,10 +214,10 @@ test("TC-003: preserves unknown future fields", () => {
   });
 });
 
-test("TC-004: preserves advisor ordering", () => {
+test("TC-004: preserves advisor ordering", async () => {
   const builder = new DefaultChairmanContextBuilder(fixedClock);
   const context = builder.build(
-    createInput([
+    await createInput([
       contrarianAdvisorResult,
       deliveryEngineeringAdvisorResult,
       failedAdvisorResult,
@@ -205,9 +230,9 @@ test("TC-004: preserves advisor ordering", () => {
   );
 });
 
-test("TC-005: does not mutate input", () => {
+test("TC-005: does not mutate input", async () => {
   const builder = new DefaultChairmanContextBuilder(fixedClock);
-  const input = createInput([deliveryEngineeringAdvisorResult]);
+  const input = await createInput([deliveryEngineeringAdvisorResult]);
   const beforeContext = structuredClone(input.decisionContext);
   const beforeAdvisor = structuredClone(input.advisors[0]);
 
@@ -217,18 +242,18 @@ test("TC-005: does not mutate input", () => {
   assert.deepEqual(input.advisors[0], beforeAdvisor);
 });
 
-test("TC-006: deterministic output with fixed clock", () => {
+test("TC-006: deterministic output with fixed clock", async () => {
   const builder = new DefaultChairmanContextBuilder(fixedClock);
-  const input = createInput([deliveryEngineeringAdvisorResult]);
+  const input = await createInput([deliveryEngineeringAdvisorResult]);
   const first = builder.build(input);
   const second = builder.build(input);
 
   assert.deepEqual(first, second);
 });
 
-test("TC-007: supports partial failure representation", () => {
+test("TC-007: supports partial failure representation", async () => {
   const builder = new DefaultChairmanContextBuilder(fixedClock);
-  const context = builder.build(createInput([failedAdvisorResult]));
+  const context = builder.build(await createInput([failedAdvisorResult]));
   const entry = context.advisors[0];
 
   assert.equal(entry.execution.status, "failed");
@@ -246,35 +271,36 @@ test("TC-008: rejects missing decision context", () => {
   );
 });
 
-test("TC-009: rejects missing advisor identity", () => {
+test("TC-009: rejects missing advisor identity", async () => {
   const builder = new DefaultChairmanContextBuilder(fixedClock);
   const advisorWithoutId = {
     ...deliveryEngineeringAdvisorResult,
     persona: { ...deliveryEngineeringAdvisorResult.persona, id: "" },
   };
+  const input = await createInput([advisorWithoutId]);
 
   assert.throws(
-    () => builder.build(createInput([advisorWithoutId])),
+    () => builder.build(input),
     (error) =>
       error instanceof ChairmanContextBuildError &&
       error.code === "MISSING_ADVISOR_ID",
   );
 });
 
-test("TC-010: supports unknown advisor identifier without special handling", () => {
+test("TC-010: supports unknown advisor identifier without special handling", async () => {
   const builder = new DefaultChairmanContextBuilder(fixedClock);
   const unknownAdvisor = {
     ...deliveryEngineeringAdvisorResult,
     persona: { ...deliveryEngineeringAdvisorResult.persona, id: "ADV-999" },
   };
-  const context = builder.build(createInput([unknownAdvisor]));
+  const context = builder.build(await createInput([unknownAdvisor]));
 
   assert.equal(context.advisors[0].advisorId, "ADV-999");
 });
 
-test("TC-020: preserves all DecisionContext fields", () => {
+test("TC-020: preserves all DecisionContext fields", async () => {
   const builder = new DefaultChairmanContextBuilder(fixedClock);
-  const input = createInput([deliveryEngineeringAdvisorResult]);
+  const input = await createInput([deliveryEngineeringAdvisorResult]);
   const context = builder.build(input);
 
   assert.equal(context.request.executionId, "EXEC-SHARED-001");

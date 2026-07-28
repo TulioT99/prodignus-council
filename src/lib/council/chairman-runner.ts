@@ -2,6 +2,7 @@ import "server-only";
 
 import { defaultChairmanContextBuilder } from "@/lib/council/chairman-context-builder";
 import { ChairmanContextBuildError } from "@/lib/council/chairman-context.errors";
+import { validateChairmanExecutionContract } from "@/lib/council/chairman-contract";
 import { buildChairmanPrompts } from "@/lib/council/chairman-prompt";
 import {
   countSuccessfulAdvisors,
@@ -27,14 +28,20 @@ import { getRuntimeConfig } from "@/config/runtime";
 import type { ConsensusPackage } from "@/lib/council/consensus/types";
 import type {
   AdvisorResult,
+  ChairmanFailedResult,
+  ChairmanFailureReasonCode,
   ChairmanResult,
+  ChairmanSuccessResult,
   DecisionContext,
 } from "@/types/council";
 
 const UNCONFIGURED_MODEL_LABEL = "Unconfigured model";
 
+/**
+ * Chairman invocation options. Consensus Package is mandatory (ENG-0007 / WP-05A).
+ */
 export type RunChairmanOptions = {
-  readonly consensus?: ConsensusPackage;
+  readonly consensus: ConsensusPackage;
 };
 
 function resolveModel(): string {
@@ -50,55 +57,20 @@ function resolveModel(): string {
   return model;
 }
 
-function createEmptyChairmanFields(): Omit<
-  ChairmanResult,
-  | "status"
-  | "executionId"
-  | "model"
-  | "durationMs"
-  | "totalTokens"
-  | "errorMessage"
-  | "insufficientCouncil"
-  | "missingPerspectives"
-  | "reducedConfidenceSynthesis"
-> {
-  return {
-    decision: "insufficient_information",
-    decisionStatement: "The council synthesis could not be completed.",
-    executiveSummary: "The Chairman could not complete the council synthesis.",
-    finalRecommendation: "The council synthesis could not be completed.",
-    rationale: "The council synthesis could not be completed.",
-    recommendationType: "defer",
-    consensus: [],
-    disagreements: [],
-    structuredDisagreements: [],
-    decisiveTradeoffs: [],
-    assumptions: [],
-    conditions: [],
-    risks: [],
-    unknowns: [],
-    minimumAdditionalEvidence: [],
-    nextActions: [],
-    reversalCriteria: [],
-    keyArguments: [],
-    nextSteps: [],
-    confidence: 0,
-  };
-}
-
 function createFailedChairmanResult(
   executionId: string,
   errorMessage: string,
+  failureReasonCode: ChairmanFailureReasonCode,
   options: {
     durationMs?: number;
     model?: string;
     insufficientCouncil?: boolean;
     missingPerspectives?: string[];
   } = {},
-): ChairmanResult {
+): ChairmanFailedResult {
   return {
-    ...createEmptyChairmanFields(),
     status: "failed",
+    outcome: "ChairmanFailed",
     executionId,
     model: options.model ?? UNCONFIGURED_MODEL_LABEL,
     durationMs: options.durationMs ?? 0,
@@ -106,6 +78,7 @@ function createFailedChairmanResult(
     promptTokens: 0,
     completionTokens: 0,
     errorMessage,
+    failureReasonCode,
     insufficientCouncil: options.insufficientCouncil,
     missingPerspectives: options.missingPerspectives,
   };
@@ -124,7 +97,7 @@ function createSuccessfulChairmanResult(
     missingPerspectives?: string[];
     reducedConfidenceSynthesis?: boolean;
   },
-): ChairmanResult {
+): ChairmanSuccessResult {
   return {
     status: "success",
     executionId,
@@ -171,10 +144,12 @@ function logChairmanExecution(entry: {
   retryCount?: number;
   errorCategory?: string;
   successfulAdvisorCount?: number;
+  outcome?: "ChairmanFailed";
 }): void {
   console.info(
     `[Council Chairman] ${JSON.stringify({
       status: entry.status,
+      outcome: entry.outcome ?? null,
       model: entry.model,
       latencyMs: entry.latencyMs,
       executionId: entry.executionId,
@@ -188,10 +163,18 @@ function logChairmanExecution(entry: {
   );
 }
 
+/**
+ * Run the Chairman Decision Engine.
+ *
+ * Pipeline gate (WP-05A):
+ * Consensus Package → Contract Validation → Chairman synthesis
+ *
+ * Invalid contracts fail closed as `ChairmanFailed` before any LLM invocation.
+ */
 export async function runChairman(
   decisionContext: DecisionContext,
   advisors: AdvisorResult[],
-  options: RunChairmanOptions = {},
+  options: RunChairmanOptions,
 ): Promise<ChairmanResult> {
   const runtime = getRuntimeConfig();
   const synthesisMinimum = getChairmanMinimumAdvisorsForSynthesis();
@@ -201,6 +184,32 @@ export async function runChairman(
     runtime.advisors.enabledAdvisorIds,
   );
 
+  const contractValidation = validateChairmanExecutionContract({
+    decisionContext,
+    advisors,
+    consensus: options?.consensus,
+  });
+
+  if (!contractValidation.ok) {
+    const failed = createFailedChairmanResult(
+      decisionContext?.executionId?.trim() || "unknown",
+      contractValidation.message,
+      contractValidation.code,
+    );
+
+    logChairmanExecution({
+      status: "failed",
+      outcome: "ChairmanFailed",
+      model: UNCONFIGURED_MODEL_LABEL,
+      latencyMs: 0,
+      executionId: failed.executionId,
+      errorCategory: contractValidation.code,
+      successfulAdvisorCount,
+    });
+
+    return failed;
+  }
+
   let model: string;
 
   try {
@@ -209,10 +218,12 @@ export async function runChairman(
     const failed = createFailedChairmanResult(
       decisionContext.executionId,
       toAdvisorSafeMessage(error),
+      "CONFIGURATION_ERROR",
     );
 
     logChairmanExecution({
       status: "failed",
+      outcome: "ChairmanFailed",
       model: UNCONFIGURED_MODEL_LABEL,
       latencyMs: 0,
       executionId: decisionContext.executionId,
@@ -230,7 +241,7 @@ export async function runChairman(
     const chairmanContext = defaultChairmanContextBuilder.build({
       decisionContext,
       advisors,
-      consensus: options.consensus,
+      consensus: contractValidation.contract.consensus,
     });
     ({ systemPrompt, userPrompt } = buildChairmanPrompts(chairmanContext));
   } catch (error) {
@@ -238,12 +249,14 @@ export async function runChairman(
       return createFailedChairmanResult(
         decisionContext.executionId,
         error.safeMessage,
+        "CONTEXT_BUILD_ERROR",
       );
     }
 
     return createFailedChairmanResult(
       decisionContext.executionId,
       toAdvisorSafeMessage(error),
+      "CONTEXT_BUILD_ERROR",
     );
   }
 
@@ -251,6 +264,7 @@ export async function runChairman(
     const failed = createFailedChairmanResult(
       decisionContext.executionId,
       "Insufficient advisor participation for substantive Chairman synthesis.",
+      "INSUFFICIENT_COUNCIL",
       {
         insufficientCouncil: true,
         missingPerspectives,
@@ -259,6 +273,7 @@ export async function runChairman(
 
     logChairmanExecution({
       status: "failed",
+      outcome: "ChairmanFailed",
       model,
       latencyMs: 0,
       executionId: decisionContext.executionId,
@@ -312,20 +327,23 @@ export async function runChairman(
       },
     );
   } catch (error) {
-    let errorCategory = "INTERNAL_ERROR";
+    let errorCategory: ChairmanFailureReasonCode = "INTERNAL_ERROR";
     let safeMessage = toAdvisorSafeMessage(error);
 
     if (error instanceof OpenRouterClientError) {
-      errorCategory = error.code;
+      errorCategory =
+        error.code === "CONFIGURATION_ERROR"
+          ? "CONFIGURATION_ERROR"
+          : "PROVIDER_ERROR";
       safeMessage =
         error.code === "CONFIGURATION_ERROR"
           ? "The Chairman model is not configured on the server."
           : error.message;
     } else if (error instanceof InvalidModelOutputError) {
-      errorCategory = error.code;
+      errorCategory = "INVALID_MODEL_OUTPUT";
       safeMessage = error.safeMessage;
     } else if (error instanceof CouncilConfigurationError) {
-      errorCategory = error.code;
+      errorCategory = "CONFIGURATION_ERROR";
       safeMessage = toAdvisorSafeMessage(error);
     }
 
@@ -335,6 +353,7 @@ export async function runChairman(
 
     logChairmanExecution({
       status: "failed",
+      outcome: "ChairmanFailed",
       model,
       latencyMs: 0,
       executionId: decisionContext.executionId,
@@ -345,6 +364,7 @@ export async function runChairman(
     return createFailedChairmanResult(
       decisionContext.executionId,
       safeMessage,
+      errorCategory,
       {
         model,
       },

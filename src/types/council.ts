@@ -250,6 +250,28 @@ export type CouncilApiResponse = CouncilApiSuccess | CouncilApiFailure;
 
 export type ChairmanStatus = "success" | "failed";
 
+/**
+ * Explicit ENG-0007 terminal failure outcome identity.
+ * Distinguishes operational Chairman failure from a validated recommendation.
+ */
+export type ChairmanFailedOutcome = "ChairmanFailed";
+
+/**
+ * WP-05A contract / execution failure taxonomy (not the full WP-05E reason catalog).
+ */
+export type ChairmanFailureReasonCode =
+  | "MISSING_CONSENSUS_PACKAGE"
+  | "INVALID_CONSENSUS_PACKAGE_SCHEMA"
+  | "MISSING_EXECUTION_METADATA"
+  | "INVALID_IDENTIFIERS"
+  | "INVALID_CHAIRMAN_CONTRACT"
+  | "CONFIGURATION_ERROR"
+  | "INSUFFICIENT_COUNCIL"
+  | "PROVIDER_ERROR"
+  | "INVALID_MODEL_OUTPUT"
+  | "CONTEXT_BUILD_ERROR"
+  | "INTERNAL_ERROR";
+
 export type ChairmanRecommendationType =
   | "proceed"
   | "proceed_with_conditions"
@@ -309,8 +331,12 @@ export type ChairmanResponseContent = {
   confidence: number;
 };
 
-export type ChairmanResult = {
-  status: ChairmanStatus;
+/**
+ * Validated Chairman recommendation package (success path only).
+ * Recommendation-shaped fields are intentionally absent from failure outcomes.
+ */
+export type ChairmanSuccessResult = {
+  status: "success";
   executionId: string;
   decision: CouncilDecision;
   decisionStatement: string;
@@ -339,11 +365,42 @@ export type ChairmanResult = {
   promptTokens?: number;
   completionTokens?: number;
   estimatedCostUsd?: number;
-  insufficientCouncil?: boolean;
   missingPerspectives?: string[];
   reducedConfidenceSynthesis?: boolean;
-  errorMessage?: string;
 };
+
+/**
+ * Explicit Chairman failure package (ENG-0007 §6.3 / §13).
+ * Never carries fabricated recommendation content.
+ */
+export type ChairmanFailedResult = {
+  status: "failed";
+  outcome: ChairmanFailedOutcome;
+  executionId: string;
+  model: string;
+  durationMs: number;
+  totalTokens: number;
+  promptTokens?: number;
+  completionTokens?: number;
+  errorMessage: string;
+  failureReasonCode: ChairmanFailureReasonCode;
+  insufficientCouncil?: boolean;
+  missingPerspectives?: string[];
+};
+
+export type ChairmanResult = ChairmanSuccessResult | ChairmanFailedResult;
+
+export function isChairmanFailed(
+  chairman: ChairmanResult | undefined,
+): chairman is ChairmanFailedResult {
+  return chairman?.status === "failed";
+}
+
+export function isChairmanSuccess(
+  chairman: ChairmanResult | undefined,
+): chairman is ChairmanSuccessResult {
+  return chairman?.status === "success";
+}
 
 export type CouncilResult = {
   decision: Decision;

@@ -71,11 +71,12 @@ Advisor confidence remains visible on each participant and is never overwritten.
 
 Uses existing runtime config `chairman.minimumSuccessfulAdvisors` (WP-07) as the consensus minimum-eligible threshold. No new hardcoded policy knobs.
 
-### 4. Chairman integration (backward compatible)
+### 4. Chairman integration (WP-05A contract)
 
 - Orchestrator always publishes a consensus package before Chairman invocation.
-- `ChairmanContextBuildInput.consensus` is optional for unit/backward compatibility.
-- When present, package fills `collectiveIntelligence` (closes empty-stub GAP-21).
+- `ChairmanContextBuildInput.consensus` and `RunChairmanOptions.consensus` are **mandatory**.
+- Contract validation rejects missing/invalid packages before any LLM invocation (`ChairmanFailed`).
+- Package fills `collectiveIntelligence` (closes empty-stub GAP-21).
 - Chairman prompt includes an explicit **CONSENSUS PACKAGE** boundary.
 - Chairman remains the sole executive recommendation authority.
 
@@ -103,10 +104,11 @@ Prompts and sensitive content are not logged.
 
 ## Baseline succession
 
-| Milestone                  | Commit                                      | Role                                          |
-| -------------------------- | ------------------------------------------- | --------------------------------------------- |
-| WP-07 Configuration Slice  | `e0d9424` (feat) / published evidence later | Config baseline before hardening              |
-| WP-03 Advisor Reliability  | `d76ee128d3f5d925b99b9f7b32c786fcf2cae7ef`  | Validated opinion gate                        |
-| **WP-04 Consensus Engine** | `3146af80bf1455f6adede8ba6979bd11bf20818a`  | **Current canonical implementation baseline** |
+| Milestone                    | Commit                                                   | Role                                                   |
+| ---------------------------- | -------------------------------------------------------- | ------------------------------------------------------ |
+| WP-07 Configuration Slice    | `e0d9424` (feat) / published evidence later              | Config baseline before hardening                       |
+| WP-03 Advisor Reliability    | `d76ee128d3f5d925b99b9f7b32c786fcf2cae7ef`               | Validated opinion gate                                 |
+| **WP-04 Consensus Engine**   | `3146af80bf1455f6adede8ba6979bd11bf20818a`               | **Consensus Engine canonical baseline**                |
+| **WP-05A Chairman Contract** | See `docs/assessments/WP-05A-IMPLEMENTATION-BASELINE.md` | **Current Chairman Decision Engine contract baseline** |
 
-Subsequent work packages **WP-05**, **WP-06**, **WP-07 Observability Slice**, and **WP-08** must start from the published WP-04 baseline commit.
+Subsequent WP-05 slices must start from the published WP-05A baseline. Consensus Engine changes remain governed by ENG-0006 / WP-04.

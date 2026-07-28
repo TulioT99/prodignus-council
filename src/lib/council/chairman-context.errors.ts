@@ -5,7 +5,8 @@ export type ChairmanContextBuildErrorCode =
   | "MISSING_DECISION_CONTEXT"
   | "MISSING_QUESTION"
   | "MISSING_ADVISORS"
-  | "MISSING_ADVISOR_ID";
+  | "MISSING_ADVISOR_ID"
+  | "MISSING_CONSENSUS_PACKAGE";
 
 export class ChairmanContextBuildError extends Error {
   readonly code: ChairmanContextBuildErrorCode;

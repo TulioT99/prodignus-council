@@ -44,7 +44,9 @@ function createAdvisor(id, status = "success") {
 }
 
 test("sortAdvisorsForDisplay returns Product Strategy through Contrarian order", () => {
-  const advisors = ADVISOR_DISPLAY_ORDER.map((id) => createAdvisor(id)).reverse();
+  const advisors = ADVISOR_DISPLAY_ORDER.map((id) =>
+    createAdvisor(id),
+  ).reverse();
   const sorted = sortAdvisorsForDisplay(advisors);
 
   assert.deepEqual(
@@ -77,6 +79,7 @@ test("aggregateCouncilMetrics sums tokens and omits cost when unavailable", () =
       { ...createAdvisor("ADV-003", "failed"), totalTokens: 0 },
     ],
     chairman: {
+      status: "success",
       totalTokens: 50,
     },
     advisorStageDurationMs: 10_000,
@@ -100,6 +103,7 @@ test("aggregateCouncilMetrics sums available cost values", () => {
   const result = {
     advisors: [advisor],
     chairman: {
+      status: "success",
       totalTokens: 10,
       estimatedCostUsd: 0.02,
     },
@@ -110,6 +114,29 @@ test("aggregateCouncilMetrics sums available cost values", () => {
 
   const metrics = aggregateCouncilMetrics(result);
   assert.equal(metrics.totalCost, 0.03);
+});
+
+test("aggregateCouncilMetrics ignores cost on ChairmanFailed outcomes", () => {
+  const advisor = {
+    ...createAdvisor("ADV-002"),
+    estimatedCostUsd: 0.01,
+  };
+  const result = {
+    advisors: [advisor],
+    chairman: {
+      status: "failed",
+      outcome: "ChairmanFailed",
+      totalTokens: 0,
+      failureReasonCode: "CONFIGURATION_ERROR",
+      errorMessage: "failed",
+    },
+    advisorStageDurationMs: 1000,
+    chairmanDurationMs: 0,
+    totalDurationMs: 1000,
+  };
+
+  const metrics = aggregateCouncilMetrics(result);
+  assert.equal(metrics.totalCost, 0.01);
 });
 
 test("getUnavailableAdvisorNames lists failed advisors in display order", () => {
@@ -154,7 +181,10 @@ test("chairman recommendation labels match user-facing table", () => {
 });
 
 test("advisor recommendation labels preserve bounded experiment wording", () => {
-  assert.equal(ADVISOR_RECOMMENDATION_LABELS.test_first, "Run a bounded experiment");
+  assert.equal(
+    ADVISOR_RECOMMENDATION_LABELS.test_first,
+    "Run a bounded experiment",
+  );
 });
 
 test("shouldShowBoundedExperimentClarity is true only for successful bounded experiments", () => {

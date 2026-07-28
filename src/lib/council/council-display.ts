@@ -2,6 +2,7 @@ import type {
   AdvisorResult,
   ChairmanRecommendationType,
   ChairmanResult,
+  ChairmanSuccessResult,
   CouncilDecision,
   CouncilRequest,
   CouncilResult,
@@ -16,7 +17,10 @@ export const ADVISOR_DISPLAY_ORDER = [
   "ADV-001",
 ] as const;
 
-export const ADVISOR_USER_FACING_NAMES: Record<(typeof ADVISOR_DISPLAY_ORDER)[number], string> = {
+export const ADVISOR_USER_FACING_NAMES: Record<
+  (typeof ADVISOR_DISPLAY_ORDER)[number],
+  string
+> = {
   "ADV-002": "Product Strategy",
   "ADV-003": "UX & Accessibility",
   "ADV-004": "Delivery Engineering",
@@ -24,7 +28,10 @@ export const ADVISOR_USER_FACING_NAMES: Record<(typeof ADVISOR_DISPLAY_ORDER)[nu
   "ADV-001": "Contrarian",
 };
 
-export const CHAIRMAN_RECOMMENDATION_LABELS: Record<ChairmanRecommendationType, string> = {
+export const CHAIRMAN_RECOMMENDATION_LABELS: Record<
+  ChairmanRecommendationType,
+  string
+> = {
   proceed: "Proceed",
   proceed_with_conditions: "Proceed with conditions",
   defer: "Defer the decision",
@@ -33,7 +40,10 @@ export const CHAIRMAN_RECOMMENDATION_LABELS: Record<ChairmanRecommendationType, 
 };
 
 /** Executive headline shown above the Council Recommendation briefing. */
-export const CHAIRMAN_RECOMMENDATION_HEADLINES: Record<ChairmanRecommendationType, string> = {
+export const CHAIRMAN_RECOMMENDATION_HEADLINES: Record<
+  ChairmanRecommendationType,
+  string
+> = {
   proceed: "Proceed",
   proceed_with_conditions: "Proceed with conditions",
   defer: "Gather more evidence",
@@ -56,8 +66,10 @@ export const COUNCIL_RECOMMENDATION_UI = {
   viewAdditionalRisks: (count: number) =>
     `View ${count} additional risk${count === 1 ? "" : "s"}`,
   noRisks: "No specific risks were included in the Council synthesis.",
-  noConditions: "No specific conditions were included in the Council synthesis.",
-  noNextSteps: "No suggested next steps were included in the Council synthesis.",
+  noConditions:
+    "No specific conditions were included in the Council synthesis.",
+  noNextSteps:
+    "No suggested next steps were included in the Council synthesis.",
   supplementaryAnalysis: "Additional Council analysis",
   owner: "Owner",
   expectedOutcome: "Expected outcome",
@@ -70,7 +82,7 @@ export type CouncilRecommendationBriefing = {
   whyRecommendation: string | null;
   keyRisks: string[];
   conditions: string[];
-  nextSteps: ChairmanResult["nextActions"];
+  nextSteps: ChairmanSuccessResult["nextActions"];
 };
 
 function normalizeComparableText(value: string): string {
@@ -86,9 +98,10 @@ export function formatOverallConfidencePercent(confidence: number): string {
 }
 
 export function buildCouncilRecommendationBriefing(
-  chairman: ChairmanResult,
+  chairman: ChairmanSuccessResult,
 ): CouncilRecommendationBriefing {
-  const headline = CHAIRMAN_RECOMMENDATION_HEADLINES[chairman.recommendationType];
+  const headline =
+    CHAIRMAN_RECOMMENDATION_HEADLINES[chairman.recommendationType];
 
   let decisionSummary = chairman.decisionStatement.trim();
   if (!decisionSummary || isDuplicateText(decisionSummary, headline)) {
@@ -109,7 +122,8 @@ export function buildCouncilRecommendationBriefing(
     whyRecommendation =
       alternateRationale &&
       !isDuplicateText(alternateRationale, headline) &&
-      (!decisionSummary || !isDuplicateText(alternateRationale, decisionSummary))
+      (!decisionSummary ||
+        !isDuplicateText(alternateRationale, decisionSummary))
         ? alternateRationale
         : "";
   }
@@ -139,21 +153,27 @@ export const SESSION_STATUS_LABELS: Record<CouncilSessionStatus, string> = {
   failed: "Failed",
 };
 
-export const SESSION_STATUS_DESCRIPTIONS: Record<CouncilSessionStatus, string> = {
-  complete:
-    "The Council produced a usable decision with sufficient advisor participation.",
-  partial:
-    "The Council produced a usable decision, but one or more perspectives were unavailable or confidence was reduced.",
-  failed: "The Council could not produce a usable final decision.",
-};
+export const SESSION_STATUS_DESCRIPTIONS: Record<CouncilSessionStatus, string> =
+  {
+    complete:
+      "The Council produced a usable decision with sufficient advisor participation.",
+    partial:
+      "The Council produced a usable decision, but one or more perspectives were unavailable or confidence was reduced.",
+    failed: "The Council could not produce a usable final decision.",
+  };
 
-export function sortAdvisorsForDisplay(advisors: AdvisorResult[]): AdvisorResult[] {
+export function sortAdvisorsForDisplay(
+  advisors: AdvisorResult[],
+): AdvisorResult[] {
   const order = new Map(ADVISOR_DISPLAY_ORDER.map((id, index) => [id, index]));
 
   return [...advisors].sort((left, right) => {
-    const leftIndex = order.get(left.persona.id as (typeof ADVISOR_DISPLAY_ORDER)[number]) ?? 999;
+    const leftIndex =
+      order.get(left.persona.id as (typeof ADVISOR_DISPLAY_ORDER)[number]) ??
+      999;
     const rightIndex =
-      order.get(right.persona.id as (typeof ADVISOR_DISPLAY_ORDER)[number]) ?? 999;
+      order.get(right.persona.id as (typeof ADVISOR_DISPLAY_ORDER)[number]) ??
+      999;
 
     return leftIndex - rightIndex;
   });
@@ -206,7 +226,10 @@ export function aggregateCouncilMetrics(result: CouncilResult) {
     (total, advisor) => total + (advisor.estimatedCostUsd ?? 0),
     0,
   );
-  const chairmanCost = result.chairman?.estimatedCostUsd;
+  const chairmanCost =
+    result.chairman?.status === "success"
+      ? result.chairman.estimatedCostUsd
+      : undefined;
   const hasAnyCost =
     result.advisors.some((advisor) => advisor.estimatedCostUsd !== undefined) ||
     chairmanCost !== undefined;
@@ -243,7 +266,9 @@ export function buildDecisionFromRequest(
   const contextParts = [request.context.trim()];
 
   if (request.alternatives?.trim()) {
-    contextParts.push(`Alternatives under consideration:\n${request.alternatives.trim()}`);
+    contextParts.push(
+      `Alternatives under consideration:\n${request.alternatives.trim()}`,
+    );
   }
 
   return {
@@ -262,7 +287,9 @@ export function isContrarianAdvisor(advisor: AdvisorResult): boolean {
   return advisor.persona.thinkingLens === "contrarian";
 }
 
-export function shouldShowBoundedExperimentClarity(chairman: ChairmanResult): boolean {
+export function shouldShowBoundedExperimentClarity(
+  chairman: ChairmanResult,
+): boolean {
   return (
     chairman.status === "success" &&
     chairman.recommendationType === "run_bounded_experiment"

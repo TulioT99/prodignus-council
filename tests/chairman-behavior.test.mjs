@@ -5,13 +5,15 @@ import {
   createOpenRouterChairmanResponse,
   validChairmanPayload,
 } from "./chairman-fixtures.mjs";
+import { buildTestConsensusPackage } from "./chairman-test-helpers.mjs";
 
 const sampleDecision = {
   id: "DEC-20260722-001",
   title: "Territorial pilot selection",
   question:
     "Should Prodignus prioritize the first territorial pilot in Goiânia, Goiás, or Palmas, Tocantins?",
-  context: "Consider citizen reach, implementation complexity, partner readiness, and operational risk.",
+  context:
+    "Consider citizen reach, implementation complexity, partner readiness, and operational risk.",
   constraints: "Pilot must launch within one quarter.",
   createdAt: "2026-07-22T10:00:00.000Z",
   status: "under_review",
@@ -78,11 +80,12 @@ afterEach(() => {
 });
 
 test("Chairman prompt preserves failed advisors and instructs against vote counting", async () => {
-  const { createDecisionContext } = await import("../src/lib/council/decision-context.ts");
-  const { defaultChairmanContextBuilder } = await import(
-    "../src/lib/council/chairman-context-builder.ts"
-  );
-  const { buildChairmanPrompts } = await import("../src/lib/council/chairman-prompt.ts");
+  const { createDecisionContext } =
+    await import("../src/lib/council/decision-context.ts");
+  const { defaultChairmanContextBuilder } =
+    await import("../src/lib/council/chairman-context-builder.ts");
+  const { buildChairmanPrompts } =
+    await import("../src/lib/council/chairman-prompt.ts");
 
   const advisors = [
     createAdvisor({
@@ -100,8 +103,14 @@ test("Chairman prompt preserves failed advisors and instructs against vote count
   ];
 
   const context = defaultChairmanContextBuilder.build({
-    decisionContext: createDecisionContext(sampleDecision, { executionId: "EXEC-BEHAVIOR-001" }),
+    decisionContext: createDecisionContext(sampleDecision, {
+      executionId: "EXEC-BEHAVIOR-001",
+    }),
     advisors,
+    consensus: await buildTestConsensusPackage({
+      executionId: "EXEC-BEHAVIOR-001",
+      advisors,
+    }),
   });
   const { systemPrompt, userPrompt } = buildChairmanPrompts(context);
 
@@ -112,63 +121,98 @@ test("Chairman prompt preserves failed advisors and instructs against vote count
 });
 
 test("runChairman preserves minority Contrarian view fields from structured output", async () => {
-  globalThis.fetch = mock.fn(async () => createOpenRouterChairmanResponse(validChairmanPayload));
+  globalThis.fetch = mock.fn(async () =>
+    createOpenRouterChairmanResponse(validChairmanPayload),
+  );
 
-  const { createDecisionContext } = await import("../src/lib/council/decision-context.ts");
+  const { createDecisionContext } =
+    await import("../src/lib/council/decision-context.ts");
   const { runChairman } = await import("../src/lib/council/chairman-runner.ts");
+  const advisors = [
+    createAdvisor({
+      id: "ADV-001",
+      name: "The Contrarian",
+      recommendation: "do_not_proceed",
+      summary: "Hidden costs may exceed estimates.",
+    }),
+    createAdvisor({
+      id: "ADV-002",
+      name: "Product Strategy",
+      summary: "Citizen value favors a bounded pilot.",
+    }),
+    createAdvisor({
+      id: "ADV-003",
+      name: "UX Advisor",
+      summary: "Citizens need guided flows.",
+    }),
+  ];
   const result = await runChairman(
     createDecisionContext(sampleDecision, { executionId: "EXEC-BEHAVIOR-001" }),
-    [
-      createAdvisor({
-        id: "ADV-001",
-        name: "The Contrarian",
-        recommendation: "do_not_proceed",
-        summary: "Hidden costs may exceed estimates.",
+    advisors,
+    {
+      consensus: await buildTestConsensusPackage({
+        executionId: "EXEC-BEHAVIOR-001",
+        advisors,
       }),
-      createAdvisor({
-        id: "ADV-002",
-        name: "Product Strategy",
-        summary: "Citizen value favors a bounded pilot.",
-      }),
-      createAdvisor({
-        id: "ADV-003",
-        name: "UX Advisor",
-        summary: "Citizens need guided flows.",
-      }),
-    ],
+    },
   );
 
   assert.equal(result.status, "success");
   assert.equal(result.minorityView?.advisorId, "ADV-001");
-  assert.match(result.recommendationType, /run_bounded_experiment|proceed_with_conditions|defer/);
+  assert.match(
+    result.recommendationType,
+    /run_bounded_experiment|proceed_with_conditions|defer/,
+  );
 });
 
 test("runChairman marks reduced-confidence synthesis when exactly three advisors succeed", async () => {
-  globalThis.fetch = mock.fn(async () => createOpenRouterChairmanResponse(validChairmanPayload));
+  globalThis.fetch = mock.fn(async () =>
+    createOpenRouterChairmanResponse(validChairmanPayload),
+  );
 
-  const { createDecisionContext } = await import("../src/lib/council/decision-context.ts");
+  const { createDecisionContext } =
+    await import("../src/lib/council/decision-context.ts");
   const { runChairman } = await import("../src/lib/council/chairman-runner.ts");
+  const advisors = [
+    createAdvisor({
+      id: "ADV-002",
+      name: "Product Strategy",
+      summary: "Pilot first.",
+    }),
+    createAdvisor({
+      id: "ADV-003",
+      name: "UX Advisor",
+      summary: "Reduce cognitive load.",
+    }),
+    createAdvisor({
+      id: "ADV-004",
+      name: "Engineering",
+      summary: "Pilot is feasible.",
+    }),
+    createAdvisor({
+      id: "ADV-001",
+      name: "The Contrarian",
+      status: "failed",
+      summary: "Failed",
+      errorMessage: "Provider error",
+    }),
+    createAdvisor({
+      id: "ADV-005",
+      name: "Human Impact",
+      status: "failed",
+      summary: "Failed",
+      errorMessage: "Provider error",
+    }),
+  ];
   const result = await runChairman(
     createDecisionContext(sampleDecision, { executionId: "EXEC-BEHAVIOR-001" }),
-    [
-      createAdvisor({ id: "ADV-002", name: "Product Strategy", summary: "Pilot first." }),
-      createAdvisor({ id: "ADV-003", name: "UX Advisor", summary: "Reduce cognitive load." }),
-      createAdvisor({ id: "ADV-004", name: "Engineering", summary: "Pilot is feasible." }),
-      createAdvisor({
-        id: "ADV-001",
-        name: "The Contrarian",
-        status: "failed",
-        summary: "Failed",
-        errorMessage: "Provider error",
+    advisors,
+    {
+      consensus: await buildTestConsensusPackage({
+        executionId: "EXEC-BEHAVIOR-001",
+        advisors,
       }),
-      createAdvisor({
-        id: "ADV-005",
-        name: "Human Impact",
-        status: "failed",
-        summary: "Failed",
-        errorMessage: "Provider error",
-      }),
-    ],
+    },
   );
 
   assert.equal(result.status, "success");

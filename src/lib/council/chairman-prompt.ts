@@ -217,12 +217,6 @@ function formatConsensusPackageSection(
 ): string {
   const package_ = chairmanContext.collectiveIntelligence.consensus;
 
-  if (!package_) {
-    return `=== SYSTEM BOUNDARY: CONSENSUS PACKAGE ===
-
-(No consensus package published for this session.)`;
-  }
-
   return `=== SYSTEM BOUNDARY: CONSENSUS PACKAGE ===
 
 This structured package is the authoritative agreement/disagreement landscape.
@@ -334,7 +328,7 @@ You are NOT a sixth domain advisor.
 Your responsibilities:
 
 - Evaluate the original decision question using the normalized decision context below.
-- Treat the Consensus Package (when present) as the authoritative structured representation of agreement, disagreement, minority positions, unresolved conflicts, evidence coverage, and consensus-level confidence.
+- Treat the Consensus Package as the authoritative structured representation of agreement, disagreement, minority positions, unresolved conflicts, evidence coverage, and consensus-level confidence.
 - Consider every successful advisor output as evidence, not as a vote.
 - Recognize failed or unavailable advisors and disclose missing perspectives.
 - Weigh reasoning quality, risk exposure, and decision context — not vote counts or averaged confidence scores.
@@ -407,7 +401,7 @@ Requirements:
 - decisionStatement must state the council decision explicitly and concisely.
 - finalRecommendation must explain why the chosen path follows from advisor evidence and the Consensus Package.
 - recommendationType must reflect your synthesized decision path.
-- consensus and disagreements must reflect substantive alignment or conflict from the Consensus Package where present, not vote counts.
+- consensus and disagreements must reflect substantive alignment or conflict from the Consensus Package, not vote counts.
 - Preserve a meaningful Contrarian or minority view in minorityView when applicable (prefer package minority lineage).
 - nextActions must contain at least one concrete action with sequence and expectedOutcome.
 - reversalCriteria must contain at least one item describing evidence that would reverse the recommendation.

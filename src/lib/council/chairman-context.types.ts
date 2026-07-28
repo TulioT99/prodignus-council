@@ -15,8 +15,8 @@ import type {
 export interface ChairmanContextBuildInput {
   readonly decisionContext: DecisionContext;
   readonly advisors: readonly AdvisorResult[];
-  /** Published consensus package (ENG-0006). Required on the live WP-04 path. */
-  readonly consensus?: ConsensusPackage;
+  /** Published consensus package (ENG-0006). Mandatory architectural boundary. */
+  readonly consensus: ConsensusPackage;
 }
 
 export interface ChairmanRequestContext {
@@ -64,11 +64,11 @@ export interface ChairmanExecutionMetadata {
 }
 
 export interface CollectiveIntelligenceContext {
-  readonly consensus?: ConsensusPackage;
-  readonly conflicts?: ConsensusPackage["disagreementMap"];
-  readonly evidence?: ConsensusPackage["evidenceCoverage"];
-  readonly confidence?: ConsensusPackage["confidence"];
-  readonly openQuestions?: ConsensusPackage["openQuestions"];
+  readonly consensus: ConsensusPackage;
+  readonly conflicts: ConsensusPackage["disagreementMap"];
+  readonly evidence: ConsensusPackage["evidenceCoverage"];
+  readonly confidence: ConsensusPackage["confidence"];
+  readonly openQuestions: ConsensusPackage["openQuestions"];
   readonly extensions?: Readonly<Record<string, unknown>>;
 }
 

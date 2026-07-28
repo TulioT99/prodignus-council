@@ -16,7 +16,8 @@ export function determineCouncilSessionStatus(
 ): CouncilSessionStatus {
   const successfulCount = countSuccessfulAdvisors(advisors);
   const chairmanSucceeded = chairman?.status === "success";
-  const chairmanInsufficient = chairman?.insufficientCouncil === true;
+  const chairmanInsufficient =
+    chairman?.status === "failed" && chairman.insufficientCouncil === true;
   const completeThreshold = getChairmanCompleteAdvisorThreshold();
   const synthesisMinimum = getChairmanMinimumAdvisorsForSynthesis();
 

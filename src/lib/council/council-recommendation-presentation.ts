@@ -1,4 +1,7 @@
-import type { ChairmanNextAction, ChairmanResult } from "@/types/council";
+import type {
+  ChairmanNextAction,
+  ChairmanSuccessResult,
+} from "@/types/council";
 import type { CouncilRecommendationBriefing } from "@/lib/council/council-display";
 import { buildCouncilRecommendationBriefing } from "@/lib/council/council-display";
 
@@ -134,7 +137,10 @@ function splitIntoSentences(text: string): string[] {
     .filter(Boolean);
 }
 
-export function excerptAtSentenceBoundary(text: string, maxLength: number): string {
+export function excerptAtSentenceBoundary(
+  text: string,
+  maxLength: number,
+): string {
   const trimmed = text.trim();
 
   if (trimmed.length <= maxLength) {
@@ -175,12 +181,15 @@ export function buildRationalePresentation(
       : normalizedFullText;
 
   const isExpandable =
-    normalizeComparableText(collapsedIntro) !== normalizeComparableText(normalizedFullText);
+    normalizeComparableText(collapsedIntro) !==
+    normalizeComparableText(normalizedFullText);
 
   return {
     fullText: normalizedFullText,
     collapsedIntro,
-    keyReasoningPoints: keyArguments.map((point) => point.trim()).filter(Boolean),
+    keyReasoningPoints: keyArguments
+      .map((point) => point.trim())
+      .filter(Boolean),
     isExpandable,
   };
 }
@@ -260,14 +269,17 @@ export function buildNextStepPresentation(
 }
 
 export function buildExecutiveCouncilRecommendationPresentation(
-  chairman: ChairmanResult,
+  chairman: ChairmanSuccessResult,
 ): ExecutiveCouncilRecommendationPresentation {
   const briefing = buildCouncilRecommendationBriefing(chairman);
 
   return {
     briefing,
     rationale: briefing.whyRecommendation
-      ? buildRationalePresentation(briefing.whyRecommendation, chairman.keyArguments)
+      ? buildRationalePresentation(
+          briefing.whyRecommendation,
+          chairman.keyArguments,
+        )
       : null,
     risks: buildRiskPresentation(briefing.keyRisks),
     conditions: buildConditionPresentation(briefing.conditions),
@@ -294,7 +306,9 @@ export function buildCouncilRecommendationRenderSnapshot(
       ...presentation.risks.priorityRisks,
       ...presentation.risks.additionalRisks,
     ],
-    conditionItems: presentation.conditions.groups.flatMap((group) => group.items),
+    conditionItems: presentation.conditions.groups.flatMap(
+      (group) => group.items,
+    ),
     nextStepKeys: presentation.nextSteps.map(
       (step) => `${step.sequence}:${step.action}`,
     ),
@@ -302,7 +316,7 @@ export function buildCouncilRecommendationRenderSnapshot(
 }
 
 export function validateCouncilRecommendationContentPreservation(
-  chairman: ChairmanResult,
+  chairman: ChairmanSuccessResult,
   snapshot: CouncilRecommendationRenderSnapshot,
 ): {
   ok: boolean;
@@ -313,9 +327,15 @@ export function validateCouncilRecommendationContentPreservation(
   missingNextSteps: string[];
   duplicateNextSteps: string[];
 } {
-  const expectedRisks = chairman.risks.map((risk) => risk.trim()).filter(Boolean);
-  const expectedConditions = chairman.conditions.map((item) => item.trim()).filter(Boolean);
-  const expectedNextSteps = chairman.nextActions.map((action) => nextStepKey(action));
+  const expectedRisks = chairman.risks
+    .map((risk) => risk.trim())
+    .filter(Boolean);
+  const expectedConditions = chairman.conditions
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const expectedNextSteps = chairman.nextActions.map((action) =>
+    nextStepKey(action),
+  );
 
   function findMissing(expected: string[], rendered: string[]): string[] {
     const renderedCounts = new Map<string, number>();
@@ -340,8 +360,14 @@ export function validateCouncilRecommendationContentPreservation(
   }
 
   const missingRisks = findMissing(expectedRisks, snapshot.riskItems);
-  const missingConditions = findMissing(expectedConditions, snapshot.conditionItems);
-  const missingNextSteps = findMissing(expectedNextSteps, snapshot.nextStepKeys);
+  const missingConditions = findMissing(
+    expectedConditions,
+    snapshot.conditionItems,
+  );
+  const missingNextSteps = findMissing(
+    expectedNextSteps,
+    snapshot.nextStepKeys,
+  );
 
   return {
     ok:

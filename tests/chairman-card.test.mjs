@@ -54,9 +54,10 @@ function createSuccessfulChairman(overrides = {}) {
 }
 
 function createLongText(prefix, count = 120) {
-  return Array.from({ length: count }, (_, index) => `${prefix} sentence ${index + 1}.`).join(
-    " ",
-  );
+  return Array.from(
+    { length: count },
+    (_, index) => `${prefix} sentence ${index + 1}.`,
+  ).join(" ");
 }
 
 test("Council Recommendation title is defined for the executive layout", () => {
@@ -80,12 +81,24 @@ test("legacy system labels are not used in the executive UI copy", () => {
 });
 
 test("executive section labels match the required hierarchy", () => {
-  assert.equal(COUNCIL_RECOMMENDATION_UI.overallConfidence, "Overall confidence");
+  assert.equal(
+    COUNCIL_RECOMMENDATION_UI.overallConfidence,
+    "Overall confidence",
+  );
   assert.equal(COUNCIL_RECOMMENDATION_UI.decisionSummary, "Decision summary");
-  assert.equal(COUNCIL_RECOMMENDATION_UI.whyRecommendation, "Why this recommendation?");
+  assert.equal(
+    COUNCIL_RECOMMENDATION_UI.whyRecommendation,
+    "Why this recommendation?",
+  );
   assert.equal(COUNCIL_RECOMMENDATION_UI.keyRisks, "Key risks");
-  assert.equal(COUNCIL_RECOMMENDATION_UI.conditionsForSuccess, "Conditions for success");
-  assert.equal(COUNCIL_RECOMMENDATION_UI.suggestedNextSteps, "Suggested next steps");
+  assert.equal(
+    COUNCIL_RECOMMENDATION_UI.conditionsForSuccess,
+    "Conditions for success",
+  );
+  assert.equal(
+    COUNCIL_RECOMMENDATION_UI.suggestedNextSteps,
+    "Suggested next steps",
+  );
   assert.equal(
     COUNCIL_RECOMMENDATION_UI.noRisks,
     "No specific risks were included in the Council synthesis.",
@@ -93,15 +106,23 @@ test("executive section labels match the required hierarchy", () => {
 });
 
 test("buildCouncilRecommendationBriefing maps fields to executive sections", () => {
-  const briefing = buildCouncilRecommendationBriefing(createSuccessfulChairman());
+  const briefing = buildCouncilRecommendationBriefing(
+    createSuccessfulChairman(),
+  );
 
   assert.equal(
     briefing.headline,
     CHAIRMAN_RECOMMENDATION_HEADLINES.run_bounded_experiment,
   );
   assert.equal(briefing.overallConfidenceLabel, "78%");
-  assert.equal(briefing.decisionSummary, validChairmanPayload.decisionStatement);
-  assert.equal(briefing.whyRecommendation, validChairmanPayload.finalRecommendation);
+  assert.equal(
+    briefing.decisionSummary,
+    validChairmanPayload.decisionStatement,
+  );
+  assert.equal(
+    briefing.whyRecommendation,
+    validChairmanPayload.finalRecommendation,
+  );
 });
 
 test("long rationale is collapsed by default without rewriting content", () => {
@@ -114,8 +135,12 @@ test("long rationale is collapsed by default without rewriting content", () => {
   assert.equal(presentation.fullText, fullText);
   assert.equal(presentation.isExpandable, true);
   assert.ok(presentation.collapsedIntro.length < fullText.length);
-  assert.ok(presentation.collapsedIntro.length <= RATIONALE_COLLAPSE_THRESHOLD + 100);
-  assert.ok(fullText.startsWith(presentation.collapsedIntro.split(".")[0].slice(0, 20)));
+  assert.ok(
+    presentation.collapsedIntro.length <= RATIONALE_COLLAPSE_THRESHOLD + 100,
+  );
+  assert.ok(
+    fullText.startsWith(presentation.collapsedIntro.split(".")[0].slice(0, 20)),
+  );
   assert.deepEqual(presentation.keyReasoningPoints, [
     "Citizen safety requires bounded rollout.",
     "Operational risk is manageable in one journey.",
@@ -173,8 +198,14 @@ test("conditions are grouped without loss or duplication", () => {
 
   const rendered = presentation.groups.flatMap((group) => group.items);
   assert.deepEqual(rendered, conditions);
-  assert.ok(presentation.groups.some((group) => group.label === "Controlled scope"));
-  assert.ok(presentation.groups.some((group) => group.label === "Additional conditions"));
+  assert.ok(
+    presentation.groups.some((group) => group.label === "Controlled scope"),
+  );
+  assert.ok(
+    presentation.groups.some(
+      (group) => group.label === "Additional conditions",
+    ),
+  );
 });
 
 test("unclassified conditions appear under Additional conditions", () => {
@@ -203,7 +234,10 @@ test("next steps preserve order and optional fields", () => {
 
   assert.equal(steps.length, 2);
   assert.equal(steps[0].owner, "Product Strategy Lead");
-  assert.equal(steps[0].expectedOutcome, "Documented workflow and capacity assessment.");
+  assert.equal(
+    steps[0].expectedOutcome,
+    "Documented workflow and capacity assessment.",
+  );
   assert.equal(steps[1].owner, undefined);
 });
 
@@ -230,9 +264,13 @@ test("content preservation validation confirms each risk, condition, and next st
     ],
   });
 
-  const presentation = buildExecutiveCouncilRecommendationPresentation(chairman);
+  const presentation =
+    buildExecutiveCouncilRecommendationPresentation(chairman);
   const snapshot = buildCouncilRecommendationRenderSnapshot(presentation);
-  const validation = validateCouncilRecommendationContentPreservation(chairman, snapshot);
+  const validation = validateCouncilRecommendationContentPreservation(
+    chairman,
+    snapshot,
+  );
 
   assert.equal(validation.ok, true);
   assert.deepEqual(validation.missingRisks, []);
@@ -244,11 +282,20 @@ test("content preservation validation confirms each risk, condition, and next st
 });
 
 test("shouldRenderCouncilRecommendation is true only for successful Chairman results", () => {
-  assert.equal(shouldRenderCouncilRecommendation(createSuccessfulChairman()), true);
+  assert.equal(
+    shouldRenderCouncilRecommendation(createSuccessfulChairman()),
+    true,
+  );
   assert.equal(
     shouldRenderCouncilRecommendation({
-      ...createSuccessfulChairman(),
       status: "failed",
+      outcome: "ChairmanFailed",
+      executionId: "EXEC-UI-001",
+      model: "test/chairman",
+      durationMs: 0,
+      totalTokens: 0,
+      errorMessage: "ChairmanFailed without recommendation content.",
+      failureReasonCode: "INVALID_CHAIRMAN_CONTRACT",
     }),
     false,
   );
@@ -257,7 +304,10 @@ test("shouldRenderCouncilRecommendation is true only for successful Chairman res
 test("recommendation taxonomy remains available on the data model", () => {
   const chairman = createSuccessfulChairman();
   assert.equal(chairman.recommendationType, "run_bounded_experiment");
-  assert.equal(CHAIRMAN_RECOMMENDATION_LABELS.run_bounded_experiment, "Run a bounded experiment");
+  assert.equal(
+    CHAIRMAN_RECOMMENDATION_LABELS.run_bounded_experiment,
+    "Run a bounded experiment",
+  );
 });
 
 test("executive presentation keeps the top hierarchy fields intact", () => {
