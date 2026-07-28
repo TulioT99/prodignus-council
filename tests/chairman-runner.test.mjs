@@ -130,6 +130,18 @@ test("TC-018: session status preservation after context-build failure", async ()
       status: "failed",
       outcome: "ChairmanFailed",
       failureReasonCode: "INVALID_CHAIRMAN_CONTRACT",
+      failureTraceability: {
+        schemaVersion: "1.0",
+        failureId: "chfail:EXEC-SHARED-001",
+        failureTimestamp: "2026-07-28T18:00:00.000Z",
+        decisionAbsent: true,
+        chairmanSpecificationVersion: "1.0",
+        governingEngineeringSpecification: "ENG-0007",
+        governingEngineeringSpecificationVersion: "1.0",
+        implementationBaseline: "9ae4974941bb253c8b7977a1fa18f63236e8cdb7",
+        executionId: "EXEC-SHARED-001",
+        traceabilityId: "trace:EXEC-SHARED-001",
+      },
     },
     3,
   );

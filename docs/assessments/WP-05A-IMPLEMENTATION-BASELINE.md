@@ -53,7 +53,7 @@ verdict: PASS WITH OBSERVATIONS
 | Branch         | `master`                                                                     |
 | Published at   | 2026-07-28 19:26:36 +0200                                                    |
 
-This commit is the **WP-05A Canonical Implementation Baseline**. Subsequent WP-05 slices (WP-05B–WP-05F) and later Decision Council work packages that depend on Chairman Decision Engine contracts must start from this commit.
+This commit is the **WP-05A Canonical Implementation Baseline** for Chairman Decision Engine **contracts**. Decision Metadata & Traceability are published under WP-05B (see `WP-05B-IMPLEMENTATION-BASELINE.md`).
 
 ## Architecture milestone progression
 
@@ -61,15 +61,15 @@ This commit is the **WP-05A Canonical Implementation Baseline**. Subsequent WP-0
 WP-07 config slice
     → WP-03 Advisor Reliability (d76ee12)
         → WP-04 Consensus Engine (3146af8)
-            → WP-05A Chairman Contract  ← CURRENT BASELINE (Chairman Decision Engine contracts)
-                → WP-05B Decision Metadata
-                → WP-05C Confidence Triad
-                → WP-05D Decision Policy
-                → WP-05E Failure / Recovery
-                → WP-05F Conformance Evidence
-                → WP-06 PKOS Validation
-                → WP-07 Observability Slice
-                → WP-08 Production Readiness
+            → WP-05A Chairman Contract (9ae4974)
+                → WP-05B Decision Metadata  ← CURRENT BASELINE (Decision Metadata & Traceability)
+                    → WP-05C Confidence Triad
+                    → WP-05D Decision Policy
+                    → WP-05E Failure / Recovery
+                    → WP-05F Conformance Evidence
+                    → WP-06 PKOS Validation
+                    → WP-07 Observability Slice
+                    → WP-08 Production Readiness
 ```
 
 ## Affected architectural scope

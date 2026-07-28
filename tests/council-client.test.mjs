@@ -33,7 +33,11 @@ function createAdvisor(id) {
 
 function createSuccessfulPayload(status = "complete") {
   const sessionSeverity =
-    status === "complete" ? "success" : status === "partial" ? "warning" : "error";
+    status === "complete"
+      ? "success"
+      : status === "partial"
+        ? "warning"
+        : "error";
   const terminalReasonCode =
     status === "complete"
       ? "SESSION_COMPLETE"
@@ -58,6 +62,23 @@ function createSuccessfulPayload(status = "complete") {
       ],
       chairman: {
         status: "success",
+        metadata: {
+          schemaVersion: "1.0",
+          decisionId: "decpkg:exec-test",
+          decisionTimestamp: "2026-07-28T18:00:00.000Z",
+          chairmanSpecificationVersion: "1.0",
+          governingEngineeringSpecification: "ENG-0007",
+          governingEngineeringSpecificationVersion: "1.0",
+          implementationBaseline: "9ae4974941bb253c8b7977a1fa18f63236e8cdb7",
+          consensusPackageId: "cp:exec-test:v1.0",
+          consensusSchemaVersion: "1.0",
+          executionId: "exec-test",
+          requestId: "DEC-TEST-001",
+          sessionId: "exec-test",
+          traceabilityId: "trace:exec-test",
+          parentConsensusReference: "cp:exec-test:v1.0",
+          executionMetadataReference: "execmeta:exec-test:cfg:test",
+        },
         recommendationType: "run_bounded_experiment",
         decisionStatement: "Run a bounded validation.",
         executiveSummary: "Validate before committing.",

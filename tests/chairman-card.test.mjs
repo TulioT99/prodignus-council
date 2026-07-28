@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { validChairmanPayload } from "./chairman-fixtures.mjs";
+import { createTestDecisionMetadata } from "./chairman-test-helpers.mjs";
 import {
   buildCouncilRecommendationBriefing,
   CHAIRMAN_RECOMMENDATION_HEADLINES,
@@ -25,6 +26,10 @@ function createSuccessfulChairman(overrides = {}) {
   return {
     status: "success",
     executionId: "EXEC-UI-001",
+    metadata: createTestDecisionMetadata({
+      executionId: "EXEC-UI-001",
+      requestId: "DEC-UI-001",
+    }),
     decision: "test_first",
     decisionStatement: validChairmanPayload.decisionStatement,
     executiveSummary: validChairmanPayload.executiveSummary,
@@ -291,6 +296,18 @@ test("shouldRenderCouncilRecommendation is true only for successful Chairman res
       status: "failed",
       outcome: "ChairmanFailed",
       executionId: "EXEC-UI-001",
+      failureTraceability: {
+        schemaVersion: "1.0",
+        failureId: "chfail:EXEC-UI-001",
+        failureTimestamp: "2026-07-28T18:00:00.000Z",
+        decisionAbsent: true,
+        chairmanSpecificationVersion: "1.0",
+        governingEngineeringSpecification: "ENG-0007",
+        governingEngineeringSpecificationVersion: "1.0",
+        implementationBaseline: "9ae4974941bb253c8b7977a1fa18f63236e8cdb7",
+        executionId: "EXEC-UI-001",
+        traceabilityId: "trace:EXEC-UI-001",
+      },
       model: "test/chairman",
       durationMs: 0,
       totalTokens: 0,

@@ -71,6 +71,7 @@ export const COUNCIL_RECOMMENDATION_UI = {
   noNextSteps:
     "No suggested next steps were included in the Council synthesis.",
   supplementaryAnalysis: "Additional Council analysis",
+  decisionLineage: "Decision lineage",
   owner: "Owner",
   expectedOutcome: "Expected outcome",
 } as const;

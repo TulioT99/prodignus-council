@@ -3,6 +3,12 @@ import "server-only";
 import { defaultChairmanContextBuilder } from "@/lib/council/chairman-context-builder";
 import { ChairmanContextBuildError } from "@/lib/council/chairman-context.errors";
 import { validateChairmanExecutionContract } from "@/lib/council/chairman-contract";
+import {
+  buildChairmanFailureTraceability,
+  buildConsensusPackageId,
+  buildDecisionMetadata,
+  validateDecisionMetadata,
+} from "@/lib/council/chairman-decision-metadata";
 import { buildChairmanPrompts } from "@/lib/council/chairman-prompt";
 import {
   countSuccessfulAdvisors,
@@ -33,6 +39,7 @@ import type {
   ChairmanResult,
   ChairmanSuccessResult,
   DecisionContext,
+  DecisionMetadata,
 } from "@/types/council";
 
 const UNCONFIGURED_MODEL_LABEL = "Unconfigured model";
@@ -66,12 +73,19 @@ function createFailedChairmanResult(
     model?: string;
     insufficientCouncil?: boolean;
     missingPerspectives?: string[];
+    decisionContext?: DecisionContext | null;
+    consensus?: ConsensusPackage | null;
   } = {},
 ): ChairmanFailedResult {
   return {
     status: "failed",
     outcome: "ChairmanFailed",
     executionId,
+    failureTraceability: buildChairmanFailureTraceability({
+      executionId,
+      decisionContext: options.decisionContext,
+      consensus: options.consensus,
+    }),
     model: options.model ?? UNCONFIGURED_MODEL_LABEL,
     durationMs: options.durationMs ?? 0,
     totalTokens: 0,
@@ -93,6 +107,7 @@ function createSuccessfulChairmanResult(
   completionTokens: number,
   totalTokens: number,
   estimatedCostUsd: number | undefined,
+  metadata: DecisionMetadata,
   options: {
     missingPerspectives?: string[];
     reducedConfidenceSynthesis?: boolean;
@@ -101,6 +116,7 @@ function createSuccessfulChairmanResult(
   return {
     status: "success",
     executionId,
+    metadata,
     decision: content.decision,
     decisionStatement: content.decisionStatement,
     executiveSummary: content.executiveSummary,
@@ -166,10 +182,11 @@ function logChairmanExecution(entry: {
 /**
  * Run the Chairman Decision Engine.
  *
- * Pipeline gate (WP-05A):
- * Consensus Package → Contract Validation → Chairman synthesis
+ * Pipeline gate (WP-05A / WP-05B):
+ * Consensus Package → Contract Validation → Chairman synthesis → Metadata validation
  *
- * Invalid contracts fail closed as `ChairmanFailed` before any LLM invocation.
+ * Invalid contracts or invalid Decision Metadata fail closed as `ChairmanFailed`
+ * before successful publication.
  */
 export async function runChairman(
   decisionContext: DecisionContext,
@@ -195,6 +212,10 @@ export async function runChairman(
       decisionContext?.executionId?.trim() || "unknown",
       contractValidation.message,
       contractValidation.code,
+      {
+        decisionContext,
+        consensus: options?.consensus,
+      },
     );
 
     logChairmanExecution({
@@ -210,6 +231,8 @@ export async function runChairman(
     return failed;
   }
 
+  const consensus = contractValidation.contract.consensus;
+
   let model: string;
 
   try {
@@ -219,6 +242,10 @@ export async function runChairman(
       decisionContext.executionId,
       toAdvisorSafeMessage(error),
       "CONFIGURATION_ERROR",
+      {
+        decisionContext,
+        consensus,
+      },
     );
 
     logChairmanExecution({
@@ -241,7 +268,7 @@ export async function runChairman(
     const chairmanContext = defaultChairmanContextBuilder.build({
       decisionContext,
       advisors,
-      consensus: contractValidation.contract.consensus,
+      consensus,
     });
     ({ systemPrompt, userPrompt } = buildChairmanPrompts(chairmanContext));
   } catch (error) {
@@ -250,6 +277,10 @@ export async function runChairman(
         decisionContext.executionId,
         error.safeMessage,
         "CONTEXT_BUILD_ERROR",
+        {
+          decisionContext,
+          consensus,
+        },
       );
     }
 
@@ -257,6 +288,10 @@ export async function runChairman(
       decisionContext.executionId,
       toAdvisorSafeMessage(error),
       "CONTEXT_BUILD_ERROR",
+      {
+        decisionContext,
+        consensus,
+      },
     );
   }
 
@@ -268,6 +303,8 @@ export async function runChairman(
       {
         insufficientCouncil: true,
         missingPerspectives,
+        decisionContext,
+        consensus,
       },
     );
 
@@ -299,6 +336,41 @@ export async function runChairman(
 
     const content = parseChairmanResponseContent(completion.content);
 
+    const metadata = buildDecisionMetadata({
+      decisionContext,
+      consensus,
+    });
+    const metadataValidation = validateDecisionMetadata(metadata, {
+      executionId: decisionContext.executionId,
+      requestId: decisionContext.decisionId,
+      consensusPackageId: buildConsensusPackageId(consensus),
+    });
+
+    if (!metadataValidation.ok) {
+      const failed = createFailedChairmanResult(
+        decisionContext.executionId,
+        metadataValidation.message,
+        "INVALID_DECISION_METADATA",
+        {
+          model: completion.model,
+          decisionContext,
+          consensus,
+        },
+      );
+
+      logChairmanExecution({
+        status: "failed",
+        outcome: "ChairmanFailed",
+        model: completion.model,
+        latencyMs: completion.durationMs,
+        executionId: decisionContext.executionId,
+        errorCategory: "INVALID_DECISION_METADATA",
+        successfulAdvisorCount,
+      });
+
+      return failed;
+    }
+
     logChairmanExecution({
       status: "success",
       model: completion.model,
@@ -320,6 +392,7 @@ export async function runChairman(
       completion.completionTokens,
       completion.totalTokens,
       completion.estimatedCostUsd,
+      metadataValidation.metadata,
       {
         missingPerspectives:
           missingPerspectives.length > 0 ? missingPerspectives : undefined,
@@ -367,6 +440,8 @@ export async function runChairman(
       errorCategory,
       {
         model,
+        decisionContext,
+        consensus,
       },
     );
   }

@@ -20,7 +20,9 @@ function BriefingSection({
   return (
     <section className="space-y-3">
       <h3 className="text-base font-semibold text-neutral-900">{title}</h3>
-      <div className="max-w-3xl text-base leading-7 text-neutral-800">{children}</div>
+      <div className="max-w-3xl text-base leading-7 text-neutral-800">
+        {children}
+      </div>
     </section>
   );
 }
@@ -48,7 +50,10 @@ function ExpandableBlock({
     <details className="group mt-4 rounded-md border border-neutral-200 bg-neutral-50">
       <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-neutral-900 marker:content-none [&::-webkit-details-marker]:hidden">
         <span className="inline-flex items-center gap-2">
-          <span aria-hidden="true" className="text-neutral-500 transition-transform group-open:rotate-90">
+          <span
+            aria-hidden="true"
+            className="text-neutral-500 transition-transform group-open:rotate-90"
+          >
             ▸
           </span>
           {summary}
@@ -59,12 +64,18 @@ function ExpandableBlock({
   );
 }
 
-function RationaleSection({ presentation }: { presentation: RationalePresentation }) {
+function RationaleSection({
+  presentation,
+}: {
+  presentation: RationalePresentation;
+}) {
   return (
     <BriefingSection title={COUNCIL_RECOMMENDATION_UI.whyRecommendation}>
       <div className="space-y-4">
         <p className="break-words whitespace-pre-wrap">
-          {presentation.isExpandable ? presentation.collapsedIntro : presentation.fullText}
+          {presentation.isExpandable
+            ? presentation.collapsedIntro
+            : presentation.fullText}
         </p>
 
         {presentation.keyReasoningPoints.length > 0 ? (
@@ -77,8 +88,12 @@ function RationaleSection({ presentation }: { presentation: RationalePresentatio
         ) : null}
 
         {presentation.isExpandable ? (
-          <ExpandableBlock summary={COUNCIL_RECOMMENDATION_UI.showFullRationale}>
-            <p className="break-words whitespace-pre-wrap">{presentation.fullText}</p>
+          <ExpandableBlock
+            summary={COUNCIL_RECOMMENDATION_UI.showFullRationale}
+          >
+            <p className="break-words whitespace-pre-wrap">
+              {presentation.fullText}
+            </p>
           </ExpandableBlock>
         ) : null}
       </div>
@@ -142,7 +157,9 @@ function ConditionsSection({
           ))}
         </div>
       ) : (
-        <p className="text-neutral-700">{COUNCIL_RECOMMENDATION_UI.noConditions}</p>
+        <p className="text-neutral-700">
+          {COUNCIL_RECOMMENDATION_UI.noConditions}
+        </p>
       )}
     </BriefingSection>
   );
@@ -178,7 +195,9 @@ function NextStepsSection({ steps }: { steps: NextStepPresentation[] }) {
   if (steps.length === 0) {
     return (
       <BriefingSection title={COUNCIL_RECOMMENDATION_UI.suggestedNextSteps}>
-        <p className="text-neutral-700">{COUNCIL_RECOMMENDATION_UI.noNextSteps}</p>
+        <p className="text-neutral-700">
+          {COUNCIL_RECOMMENDATION_UI.noNextSteps}
+        </p>
       </BriefingSection>
     );
   }
@@ -212,11 +231,20 @@ export function ChairmanCard({ chairman }: ChairmanCardProps) {
           {chairman.errorMessage ??
             "The Chairman could not produce a final decision for this Council session."}
         </div>
+        {chairman.failureTraceability ? (
+          <p className="mt-3 break-all font-mono text-xs text-neutral-600">
+            Failure ID: {chairman.failureTraceability.failureId}
+            {chairman.failureTraceability.decisionAbsent
+              ? " · decisionAbsent=true"
+              : ""}
+          </p>
+        ) : null}
       </article>
     );
   }
 
-  const presentation = buildExecutiveCouncilRecommendationPresentation(chairman);
+  const presentation =
+    buildExecutiveCouncilRecommendationPresentation(chairman);
   const { briefing } = presentation;
 
   return (
@@ -270,12 +298,77 @@ export function ChairmanCard({ chairman }: ChairmanCardProps) {
 
         <NextStepsSection steps={presentation.nextSteps} />
 
-        <DisclosureSection title={COUNCIL_RECOMMENDATION_UI.supplementaryAnalysis}>
+        <DisclosureSection title={COUNCIL_RECOMMENDATION_UI.decisionLineage}>
+          <dl className="grid gap-3 text-sm text-neutral-800 sm:grid-cols-2">
+            <div>
+              <dt className="font-semibold text-neutral-700">Decision ID</dt>
+              <dd className="mt-1 break-all font-mono text-xs">
+                {chairman.metadata.decisionId}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-neutral-700">Published</dt>
+              <dd className="mt-1 break-all font-mono text-xs">
+                {chairman.metadata.decisionTimestamp}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-neutral-700">
+                Governing specification
+              </dt>
+              <dd className="mt-1 break-all font-mono text-xs">
+                {chairman.metadata.governingEngineeringSpecification} v
+                {chairman.metadata.governingEngineeringSpecificationVersion}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-neutral-700">
+                Implementation baseline
+              </dt>
+              <dd className="mt-1 break-all font-mono text-xs">
+                {chairman.metadata.implementationBaseline}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-neutral-700">
+                Consensus Package
+              </dt>
+              <dd className="mt-1 break-all font-mono text-xs">
+                {chairman.metadata.consensusPackageId}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-neutral-700">
+                Traceability ID
+              </dt>
+              <dd className="mt-1 break-all font-mono text-xs">
+                {chairman.metadata.traceabilityId}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-neutral-700">Execution ID</dt>
+              <dd className="mt-1 break-all font-mono text-xs">
+                {chairman.metadata.executionId}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-neutral-700">Request ID</dt>
+              <dd className="mt-1 break-all font-mono text-xs">
+                {chairman.metadata.requestId}
+              </dd>
+            </div>
+          </dl>
+        </DisclosureSection>
+
+        <DisclosureSection
+          title={COUNCIL_RECOMMENDATION_UI.supplementaryAnalysis}
+        >
           <div className="space-y-6">
             {chairman.executiveSummary &&
             briefing.decisionSummary &&
             chairman.executiveSummary.trim() !== briefing.decisionSummary &&
-            chairman.executiveSummary.trim() !== presentation.rationale?.fullText ? (
+            chairman.executiveSummary.trim() !==
+              presentation.rationale?.fullText ? (
               <section>
                 <h4 className="text-sm font-semibold uppercase tracking-wide text-neutral-700">
                   Executive summary
@@ -315,7 +408,9 @@ export function ChairmanCard({ chairman }: ChairmanCardProps) {
                       key={`${item.topic}-${item.resolution}`}
                       className="rounded-md border border-neutral-200 bg-white p-4"
                     >
-                      <p className="font-medium text-neutral-900">{item.topic}</p>
+                      <p className="font-medium text-neutral-900">
+                        {item.topic}
+                      </p>
                       {item.positions.length > 0 ? (
                         <ul className="mt-2 list-disc space-y-1 pl-5">
                           {item.positions.map((position) => (
@@ -324,7 +419,8 @@ export function ChairmanCard({ chairman }: ChairmanCardProps) {
                         </ul>
                       ) : null}
                       <p className="mt-2">
-                        <span className="font-medium">Resolution:</span> {item.resolution}
+                        <span className="font-medium">Resolution:</span>{" "}
+                        {item.resolution}
                       </p>
                     </li>
                   ))}
@@ -361,8 +457,12 @@ export function ChairmanCard({ chairman }: ChairmanCardProps) {
                       key={`${item.tradeoff}-${item.preferredSide}`}
                       className="rounded-md border border-neutral-200 bg-white p-4"
                     >
-                      <p className="font-medium text-neutral-900">{item.tradeoff}</p>
-                      <p className="mt-2">Preferred side: {item.preferredSide}</p>
+                      <p className="font-medium text-neutral-900">
+                        {item.tradeoff}
+                      </p>
+                      <p className="mt-2">
+                        Preferred side: {item.preferredSide}
+                      </p>
                       <p className="mt-2 text-neutral-600">{item.reason}</p>
                     </li>
                   ))}
@@ -390,10 +490,14 @@ export function ChairmanCard({ chairman }: ChairmanCardProps) {
                       key={`${item.evidence}-${item.whyNeeded}`}
                       className="rounded-md border border-neutral-200 bg-white p-4"
                     >
-                      <p className="font-medium text-neutral-900">{item.evidence}</p>
+                      <p className="font-medium text-neutral-900">
+                        {item.evidence}
+                      </p>
                       <p className="mt-2 text-neutral-600">{item.whyNeeded}</p>
                       {item.owner ? (
-                        <p className="mt-2 text-neutral-600">Owner: {item.owner}</p>
+                        <p className="mt-2 text-neutral-600">
+                          Owner: {item.owner}
+                        </p>
                       ) : null}
                     </li>
                   ))}

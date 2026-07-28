@@ -257,6 +257,68 @@ export type ChairmanStatus = "success" | "failed";
 export type ChairmanFailedOutcome = "ChairmanFailed";
 
 /**
+ * Published Decision Metadata Package (ENG-0007 §6.2 / WP-05B).
+ * Mandatory on successful Chairman decisions. Provider-independent.
+ */
+export type DecisionMetadata = {
+  readonly schemaVersion: "1.0";
+  /** Unique identity of the published decision package. */
+  readonly decisionId: string;
+  /** ISO-8601 timestamp when the decision package was published. */
+  readonly decisionTimestamp: string;
+  /** Chairman Decision Engine specification version applied. */
+  readonly chairmanSpecificationVersion: string;
+  /** Governing ENG identity (ENG-0007). */
+  readonly governingEngineeringSpecification: "ENG-0007";
+  /** Governing ENG approved version. */
+  readonly governingEngineeringSpecificationVersion: string;
+  /** Published implementation baseline commit identity. */
+  readonly implementationBaseline: string;
+  /** Identity of the immutable Consensus Package consumed. */
+  readonly consensusPackageId: string;
+  /** Consensus Package schema version. */
+  readonly consensusSchemaVersion: string;
+  /** Council execution / correlation identifier. */
+  readonly executionId: string;
+  /** Original decision request identifier. */
+  readonly requestId: string;
+  /** Session correlation identifier when available. */
+  readonly sessionId?: string;
+  /** Traceability / lineage identifier for audit reconstruction. */
+  readonly traceabilityId: string;
+  /** Explicit parent reference to the consumed Consensus Package. */
+  readonly parentConsensusReference: string;
+  /** Reference to execution metadata that informed the decision. */
+  readonly executionMetadataReference: string;
+};
+
+/**
+ * Failure-path traceability (ENG-0007 §6.2.1).
+ * Preserves execution lineage without fabricating a completed decision identity.
+ */
+export type ChairmanFailureTraceability = {
+  readonly schemaVersion: "1.0";
+  /** Unique identity of this ChairmanFailed publication. */
+  readonly failureId: string;
+  /** ISO-8601 timestamp when the failure outcome was published. */
+  readonly failureTimestamp: string;
+  /** Explicit marker: no completed decision package exists. */
+  readonly decisionAbsent: true;
+  readonly chairmanSpecificationVersion: string;
+  readonly governingEngineeringSpecification: "ENG-0007";
+  readonly governingEngineeringSpecificationVersion: string;
+  readonly implementationBaseline: string;
+  readonly executionId: string;
+  readonly requestId?: string;
+  readonly sessionId?: string;
+  readonly consensusPackageId?: string;
+  readonly consensusSchemaVersion?: string;
+  readonly traceabilityId: string;
+  readonly parentConsensusReference?: string;
+  readonly executionMetadataReference?: string;
+};
+
+/**
  * WP-05A contract / execution failure taxonomy (not the full WP-05E reason catalog).
  */
 export type ChairmanFailureReasonCode =
@@ -265,6 +327,7 @@ export type ChairmanFailureReasonCode =
   | "MISSING_EXECUTION_METADATA"
   | "INVALID_IDENTIFIERS"
   | "INVALID_CHAIRMAN_CONTRACT"
+  | "INVALID_DECISION_METADATA"
   | "CONFIGURATION_ERROR"
   | "INSUFFICIENT_COUNCIL"
   | "PROVIDER_ERROR"
@@ -334,10 +397,13 @@ export type ChairmanResponseContent = {
 /**
  * Validated Chairman recommendation package (success path only).
  * Recommendation-shaped fields are intentionally absent from failure outcomes.
+ * Decision Metadata is mandatory (ENG-0007 §6.2 / WP-05B).
  */
 export type ChairmanSuccessResult = {
   status: "success";
   executionId: string;
+  /** ENG-0007 Decision Metadata Package — required for successful publication. */
+  metadata: DecisionMetadata;
   decision: CouncilDecision;
   decisionStatement: string;
   executiveSummary: string;
@@ -372,11 +438,14 @@ export type ChairmanSuccessResult = {
 /**
  * Explicit Chairman failure package (ENG-0007 §6.3 / §13).
  * Never carries fabricated recommendation content.
+ * Failure traceability preserves execution lineage without implying a decision.
  */
 export type ChairmanFailedResult = {
   status: "failed";
   outcome: ChairmanFailedOutcome;
   executionId: string;
+  /** Failure-path traceability — decisionAbsent is always true. */
+  failureTraceability: ChairmanFailureTraceability;
   model: string;
   durationMs: number;
   totalTokens: number;
