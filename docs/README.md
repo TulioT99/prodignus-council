@@ -52,7 +52,8 @@ All engineering documentation in this repository follows the [OPS-0001 — Engin
 | [WP-04-IMPLEMENTATION-BASELINE.md](assessments/WP-04-IMPLEMENTATION-BASELINE.md)                       | WP-04 Canonical Implementation Baseline — Consensus Engine   | Published (Consensus Engine baseline)          |
 | [WP-05A-IMPLEMENTATION-BASELINE.md](assessments/WP-05A-IMPLEMENTATION-BASELINE.md)                     | WP-05A Canonical Implementation Baseline — Chairman Contract | Published (Chairman contract baseline)         |
 | [WP-05B-IMPLEMENTATION-BASELINE.md](assessments/WP-05B-IMPLEMENTATION-BASELINE.md)                     | WP-05B Canonical Implementation Baseline — Decision Metadata | Published (superseded by WP-05C)               |
-| [WP-05C-IMPLEMENTATION-BASELINE.md](assessments/WP-05C-IMPLEMENTATION-BASELINE.md)                     | WP-05C Canonical Implementation Baseline — Confidence Triad  | Published (current Confidence baseline)        |
+| [WP-05C-IMPLEMENTATION-BASELINE.md](assessments/WP-05C-IMPLEMENTATION-BASELINE.md)                     | WP-05C Canonical Implementation Baseline — Confidence Triad  | Published (superseded by WP-05D)               |
+| [WP-05D-IMPLEMENTATION-BASELINE.md](assessments/WP-05D-IMPLEMENTATION-BASELINE.md)                     | WP-05D Canonical Implementation Baseline — Decision Policy   | Published (current Decision Policy baseline)   |
 
 ## Architecture (informative)
 
@@ -62,6 +63,7 @@ All engineering documentation in this repository follows the [OPS-0001 — Engin
 | [CONSENSUS_ENGINE.md](architecture/CONSENSUS_ENGINE.md)                     | Consensus Engine Implementation Notes (WP-04)                  | Informative |
 | [CHAIRMAN_DECISION_METADATA.md](architecture/CHAIRMAN_DECISION_METADATA.md) | Chairman Decision Metadata & Traceability (WP-05B)             | Informative |
 | [CHAIRMAN_CONFIDENCE_MODEL.md](architecture/CHAIRMAN_CONFIDENCE_MODEL.md)   | Chairman Confidence Triad & Uncertainty (WP-05C)               | Informative |
+| [CHAIRMAN_DECISION_POLICY.md](architecture/CHAIRMAN_DECISION_POLICY.md)     | Chairman Decision Policy Enforcement (WP-05D)                  | Informative |
 
 ## Implementation Plans
 

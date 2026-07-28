@@ -122,6 +122,22 @@ function createSuccessfulPayload(status = "complete") {
           ],
           nextStepsToReduceUncertainty: [],
         },
+        policyEvaluation: {
+          schemaVersion: "1.0",
+          status: "Approved",
+          rulesEvaluated: [
+            {
+              ruleId: "DP-R01",
+              ruleName: "Required decision artifacts present",
+              outcome: "Pass",
+              explanation: "API payload policy fixture.",
+            },
+          ],
+          violations: [],
+          evaluationTimestamp: "2026-07-28T18:00:00.000Z",
+          policyVersion: "1.0",
+          evaluator: "chairman-decision-policy-engine",
+        },
         model: "chairman-model",
         durationMs: 1000,
         totalTokens: 20,

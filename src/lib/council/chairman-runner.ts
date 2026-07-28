@@ -13,6 +13,7 @@ import {
   buildDecisionMetadata,
   validateDecisionMetadata,
 } from "@/lib/council/chairman-decision-metadata";
+import { runDecisionPolicyGate } from "@/lib/council/chairman-decision-policy";
 import { buildChairmanPrompts } from "@/lib/council/chairman-prompt";
 import {
   countSuccessfulAdvisors,
@@ -45,6 +46,7 @@ import type {
   DecisionConfidence,
   DecisionContext,
   DecisionMetadata,
+  DecisionPolicyResult,
   DecisionUncertainty,
 } from "@/types/council";
 
@@ -81,6 +83,7 @@ function createFailedChairmanResult(
     missingPerspectives?: string[];
     decisionContext?: DecisionContext | null;
     consensus?: ConsensusPackage | null;
+    policyEvaluation?: DecisionPolicyResult;
   } = {},
 ): ChairmanFailedResult {
   return {
@@ -99,6 +102,7 @@ function createFailedChairmanResult(
     completionTokens: 0,
     errorMessage,
     failureReasonCode,
+    policyEvaluation: options.policyEvaluation,
     insufficientCouncil: options.insufficientCouncil,
     missingPerspectives: options.missingPerspectives,
   };
@@ -116,6 +120,7 @@ function createSuccessfulChairmanResult(
   metadata: DecisionMetadata,
   decisionConfidence: DecisionConfidence,
   uncertainty: DecisionUncertainty,
+  policyEvaluation: DecisionPolicyResult,
   options: {
     missingPerspectives?: string[];
     reducedConfidenceSynthesis?: boolean;
@@ -127,6 +132,7 @@ function createSuccessfulChairmanResult(
     metadata,
     decisionConfidence,
     uncertainty,
+    policyEvaluation,
     decision: content.decision,
     decisionStatement: content.decisionStatement,
     executiveSummary: content.executiveSummary,
@@ -192,12 +198,12 @@ function logChairmanExecution(entry: {
 /**
  * Run the Chairman Decision Engine.
  *
- * Pipeline gate (WP-05A / WP-05B / WP-05C):
+ * Pipeline gate (WP-05A / WP-05B / WP-05C / WP-05D):
  * Consensus Package → Contract Validation → Chairman synthesis →
- * Metadata validation → Confidence Triad validation
+ * Metadata validation → Confidence Triad validation → Decision Policy evaluation
  *
- * Invalid contracts, metadata, or confidence fail closed as `ChairmanFailed`
- * before successful publication.
+ * Invalid contracts, metadata, confidence, or rejected policy fail closed as
+ * `ChairmanFailed` before successful publication.
  */
 export async function runChairman(
   decisionContext: DecisionContext,
@@ -423,6 +429,50 @@ export async function runChairman(
       return failed;
     }
 
+    const policyGate = runDecisionPolicyGate({
+      candidate: {
+        metadata: metadataValidation.metadata,
+        decisionConfidence: confidenceValidation.decisionConfidence,
+        uncertainty: confidenceValidation.uncertainty,
+        consensus,
+        publishedConfidenceAlias:
+          confidenceValidation.decisionConfidence.recommendationConfidence,
+        priorValidationFailed: false,
+        candidateKind: "success_candidate",
+        reducedConfidenceSynthesis,
+      },
+    });
+
+    if (!policyGate.ok) {
+      const failureReasonCode =
+        policyGate.policyEvaluation?.status === "Rejected"
+          ? "DECISION_POLICY_REJECTED"
+          : "INVALID_DECISION_POLICY";
+      const failed = createFailedChairmanResult(
+        decisionContext.executionId,
+        policyGate.message,
+        failureReasonCode,
+        {
+          model: completion.model,
+          decisionContext,
+          consensus,
+          policyEvaluation: policyGate.policyEvaluation,
+        },
+      );
+
+      logChairmanExecution({
+        status: "failed",
+        outcome: "ChairmanFailed",
+        model: completion.model,
+        latencyMs: completion.durationMs,
+        executionId: decisionContext.executionId,
+        errorCategory: failureReasonCode,
+        successfulAdvisorCount,
+      });
+
+      return failed;
+    }
+
     logChairmanExecution({
       status: "success",
       model: completion.model,
@@ -447,6 +497,7 @@ export async function runChairman(
       metadataValidation.metadata,
       confidenceValidation.decisionConfidence,
       confidenceValidation.uncertainty,
+      policyGate.policyEvaluation,
       {
         missingPerspectives:
           missingPerspectives.length > 0 ? missingPerspectives : undefined,

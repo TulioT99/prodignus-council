@@ -62,6 +62,11 @@ export const COUNCIL_RECOMMENDATION_UI = {
   uncertainty: "Uncertainty",
   materialUncertainty: "Material uncertainty present",
   noMaterialUncertainty: "No material uncertainty indicators detected",
+  policyStatus: "Policy status",
+  policyApproved: "Approved",
+  policyEscalationRequired: "Escalation required",
+  policyRejected: "Rejected",
+  policyViolations: "Policy notes",
   decisionSummary: "Decision summary",
   whyRecommendation: "Why this recommendation?",
   keyRisks: "Key risks",
@@ -108,11 +113,19 @@ export type UncertaintyPresentation = {
   nextStepsToReduceUncertainty: readonly string[];
 };
 
+export type PolicyPresentation = {
+  status: ChairmanSuccessResult["policyEvaluation"]["status"];
+  statusLabel: string;
+  escalationRequired: boolean;
+  violationMessages: readonly string[];
+};
+
 export type CouncilRecommendationBriefing = {
   headline: string;
   overallConfidenceLabel: string;
   confidenceTriad: ConfidenceTriadPresentation;
   uncertainty: UncertaintyPresentation;
+  policy: PolicyPresentation;
   decisionSummary: string | null;
   whyRecommendation: string | null;
   keyRisks: string[];
@@ -172,6 +185,25 @@ export function buildUncertaintyPresentation(
   };
 }
 
+export function buildPolicyPresentation(
+  chairman: ChairmanSuccessResult,
+): PolicyPresentation {
+  const policy = chairman.policyEvaluation;
+  const statusLabel =
+    policy.status === "Approved"
+      ? COUNCIL_RECOMMENDATION_UI.policyApproved
+      : policy.status === "EscalationRequired"
+        ? COUNCIL_RECOMMENDATION_UI.policyEscalationRequired
+        : COUNCIL_RECOMMENDATION_UI.policyRejected;
+
+  return {
+    status: policy.status,
+    statusLabel,
+    escalationRequired: policy.status === "EscalationRequired",
+    violationMessages: policy.violations.map((item) => item.message),
+  };
+}
+
 export function buildCouncilRecommendationBriefing(
   chairman: ChairmanSuccessResult,
 ): CouncilRecommendationBriefing {
@@ -210,6 +242,7 @@ export function buildCouncilRecommendationBriefing(
     overallConfidenceLabel: confidenceTriad.recommendationPercent,
     confidenceTriad,
     uncertainty: buildUncertaintyPresentation(chairman),
+    policy: buildPolicyPresentation(chairman),
     decisionSummary: decisionSummary || null,
     whyRecommendation: whyRecommendation || null,
     keyRisks: chairman.risks,

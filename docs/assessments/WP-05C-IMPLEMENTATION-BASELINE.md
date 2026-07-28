@@ -54,7 +54,7 @@ verdict: PASS WITH OBSERVATIONS
 | Branch         | `master`                                                     |
 | Published at   | 2026-07-28 20:00:30 +0200                                    |
 
-This commit is the **WP-05C Canonical Implementation Baseline**. Subsequent WP-05 slices (WP-05D–WP-05F) that depend on the Confidence Triad and Uncertainty Model must start from the published `master` HEAD that carries this baseline (treat **git HEAD** as authoritative if a docs amend follows the stamped implementation hash).
+This commit is the **WP-05C Canonical Implementation Baseline** for Confidence Triad & Uncertainty. It has been **superseded** as the current Chairman Decision Engine implementation baseline by **WP-05D** (see `WP-05D-IMPLEMENTATION-BASELINE.md`). Confidence Triad and Uncertainty remain in force and are preserved by WP-05D.
 
 ## Architecture milestone progression
 
@@ -64,11 +64,11 @@ WP-07 config slice
         → WP-04 Consensus Engine (3146af8)
             → WP-05A Chairman Contract (9ae4974)
                 → WP-05B Decision Metadata (08dc9cd)
-                    → WP-05C Confidence Triad  ← CURRENT BASELINE (Confidence & Uncertainty)
-                    → WP-05D Decision Policy
-                    → WP-05E Failure / Recovery
-                    → WP-05F Conformance Evidence
-                    → WP-06 / WP-07 obs / WP-08
+                    → WP-05C Confidence Triad (9a2c018)
+                        → WP-05D Decision Policy  ← CURRENT BASELINE
+                        → WP-05E Failure / Recovery
+                        → WP-05F Conformance Evidence
+                        → WP-06 / WP-07 obs / WP-08
 ```
 
 ## Affected architectural scope
@@ -108,11 +108,13 @@ WP-07 config slice
 - Executive Architecture Review accepted (PASS WITH OBSERVATIONS)
 - ENG-0007 §10 / §11 implemented for this slice
 - ENG-0006 Consensus Package boundary preserved
-- WP-05B superseded as the current Chairman implementation baseline
-- Remaining WP-05 slices (D–F) unchanged and out of scope for this baseline
+- WP-05B superseded as the current Chairman implementation baseline at time of WP-05C publication
+- **Current Chairman implementation baseline:** WP-05D (see `WP-05D-IMPLEMENTATION-BASELINE.md`)
 
 ## Mandatory starting point for
 
-- WP-05D — Decision Policy Enforcement
+- WP-05D — Decision Policy Enforcement (**published** — see `WP-05D-IMPLEMENTATION-BASELINE.md`)
 - WP-05E — Failure Model & Recovery Enhancements
 - WP-05F — Conformance Testing & Publication
+
+**Current Chairman implementation baseline:** WP-05D.

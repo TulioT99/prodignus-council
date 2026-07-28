@@ -66,6 +66,8 @@ CouncilResult → API JSON → Presentation (triad + uncertainty)
 
 Confidence is generated **once** on the success path and is not regenerated downstream.
 
+Publication continues with Decision Policy Evaluation (WP-05D) after confidence validation.
+
 ## Validation rules (publication gate)
 
 Before successful publication, validation requires:

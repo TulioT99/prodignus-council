@@ -239,6 +239,25 @@ export function ChairmanCard({ chairman }: ChairmanCardProps) {
               : ""}
           </p>
         ) : null}
+        {chairman.policyEvaluation ? (
+          <div className="mt-4 rounded-md border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-800">
+            <p className="font-semibold text-neutral-900">
+              {COUNCIL_RECOMMENDATION_UI.policyStatus}:{" "}
+              {chairman.policyEvaluation.status === "EscalationRequired"
+                ? COUNCIL_RECOMMENDATION_UI.policyEscalationRequired
+                : chairman.policyEvaluation.status === "Rejected"
+                  ? COUNCIL_RECOMMENDATION_UI.policyRejected
+                  : COUNCIL_RECOMMENDATION_UI.policyApproved}
+            </p>
+            {chairman.policyEvaluation.violations.length > 0 ? (
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {chairman.policyEvaluation.violations.map((item) => (
+                  <li key={item.violationId}>{item.message}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
       </article>
     );
   }
@@ -298,9 +317,37 @@ export function ChairmanCard({ chairman }: ChairmanCardProps) {
           {briefing.confidenceTriad.consensusLabel}:{" "}
           {briefing.confidenceTriad.consensusPercent}
         </p>
+        <p className="mt-3 text-sm text-neutral-800">
+          {COUNCIL_RECOMMENDATION_UI.policyStatus}:{" "}
+          <span className="font-semibold text-neutral-900">
+            {briefing.policy.statusLabel}
+          </span>
+        </p>
       </header>
 
       <div className="mt-6 space-y-10">
+        {briefing.policy.escalationRequired ? (
+          <div
+            role="status"
+            className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+          >
+            <p className="font-semibold">
+              {COUNCIL_RECOMMENDATION_UI.policyEscalationRequired}
+            </p>
+            <p className="mt-1">
+              This decision requires human escalation before it should be
+              treated as automatically actionable.
+            </p>
+            {briefing.policy.violationMessages.length > 0 ? (
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {briefing.policy.violationMessages.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ) : null}
+
         {briefing.uncertainty.material ? (
           <div
             role="status"

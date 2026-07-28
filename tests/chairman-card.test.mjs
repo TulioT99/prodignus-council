@@ -5,6 +5,7 @@ import { validChairmanPayload } from "./chairman-fixtures.mjs";
 import {
   createTestDecisionConfidence,
   createTestDecisionMetadata,
+  createTestDecisionPolicyResult,
   createTestDecisionUncertainty,
 } from "./chairman-test-helpers.mjs";
 import {
@@ -37,6 +38,8 @@ function createSuccessfulChairman(overrides = {}) {
     });
   const uncertainty =
     overrides.uncertainty ?? createTestDecisionUncertainty({ material: false });
+  const policyEvaluation =
+    overrides.policyEvaluation ?? createTestDecisionPolicyResult();
 
   return {
     status: "success",
@@ -71,6 +74,7 @@ function createSuccessfulChairman(overrides = {}) {
     ...overrides,
     decisionConfidence,
     uncertainty,
+    policyEvaluation,
     confidence: decisionConfidence.recommendationConfidence,
   };
 }
@@ -147,6 +151,8 @@ test("buildCouncilRecommendationBriefing maps fields to executive sections", () 
   assert.equal(briefing.confidenceTriad.reasoningPercent, "78%");
   assert.equal(briefing.confidenceTriad.recommendationPercent, "78%");
   assert.equal(briefing.uncertainty.material, false);
+  assert.equal(briefing.policy.status, "Approved");
+  assert.equal(briefing.policy.statusLabel, "Approved");
   assert.equal(
     briefing.decisionSummary,
     validChairmanPayload.decisionStatement,

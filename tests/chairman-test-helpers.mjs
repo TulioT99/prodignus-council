@@ -96,6 +96,30 @@ export function createTestDecisionUncertainty(overrides = {}) {
   };
 }
 
+export function createTestDecisionPolicyResult(overrides = {}) {
+  const status = overrides.status ?? "Approved";
+  const rulesEvaluated = overrides.rulesEvaluated ?? [
+    {
+      ruleId: "DP-R01",
+      ruleName: "Required decision artifacts present",
+      outcome: "Pass",
+      explanation: "Test fixture — artifacts present.",
+    },
+  ];
+
+  return {
+    schemaVersion: "1.0",
+    status,
+    rulesEvaluated,
+    violations: overrides.violations ?? [],
+    evaluationTimestamp:
+      overrides.evaluationTimestamp ?? "2026-07-28T20:00:00.000Z",
+    policyVersion: "1.0",
+    evaluator: "chairman-decision-policy-engine",
+    ...overrides,
+  };
+}
+
 export function assertChairmanFailed(result) {
   if (result.status !== "failed") {
     throw new Error(`Expected ChairmanFailed, got status=${result.status}`);

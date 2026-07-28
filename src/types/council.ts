@@ -329,6 +329,8 @@ export type ChairmanFailureReasonCode =
   | "INVALID_CHAIRMAN_CONTRACT"
   | "INVALID_DECISION_METADATA"
   | "INVALID_DECISION_CONFIDENCE"
+  | "DECISION_POLICY_REJECTED"
+  | "INVALID_DECISION_POLICY"
   | "CONFIGURATION_ERROR"
   | "INSUFFICIENT_COUNCIL"
   | "PROVIDER_ERROR"
@@ -435,10 +437,48 @@ export type DecisionUncertainty = {
 };
 
 /**
+ * Decision Policy evaluation (ENG-0007 §8 / WP-05D).
+ * Deterministic governance gate — not LLM reasoning.
+ */
+export type DecisionPolicyStatus =
+  "Approved" | "EscalationRequired" | "Rejected";
+
+export type DecisionPolicyRuleOutcome = "Pass" | "EscalationRequired" | "Fail";
+
+export type DecisionPolicyRuleEvaluation = {
+  readonly ruleId: string;
+  readonly ruleName: string;
+  readonly outcome: DecisionPolicyRuleOutcome;
+  readonly explanation: string;
+};
+
+export type DecisionPolicyViolationSeverity =
+  "critical" | "major" | "escalation";
+
+export type DecisionPolicyViolation = {
+  readonly violationId: string;
+  readonly ruleId: string;
+  readonly severity: DecisionPolicyViolationSeverity;
+  readonly message: string;
+  readonly governingSpecification: "ENG-0007";
+};
+
+export type DecisionPolicyResult = {
+  readonly schemaVersion: "1.0";
+  readonly status: DecisionPolicyStatus;
+  readonly rulesEvaluated: readonly DecisionPolicyRuleEvaluation[];
+  readonly violations: readonly DecisionPolicyViolation[];
+  readonly evaluationTimestamp: string;
+  readonly policyVersion: string;
+  readonly evaluator: "chairman-decision-policy-engine";
+};
+
+/**
  * Validated Chairman recommendation package (success path only).
  * Recommendation-shaped fields are intentionally absent from failure outcomes.
  * Decision Metadata is mandatory (ENG-0007 §6.2 / WP-05B).
  * Decision Confidence + Uncertainty are mandatory (ENG-0007 §10–11 / WP-05C).
+ * Decision Policy evaluation is mandatory (ENG-0007 §8 / WP-05D).
  */
 export type ChairmanSuccessResult = {
   status: "success";
@@ -449,6 +489,8 @@ export type ChairmanSuccessResult = {
   decisionConfidence: DecisionConfidence;
   /** ENG-0007 Uncertainty Package — required for successful publication. */
   uncertainty: DecisionUncertainty;
+  /** ENG-0007 Decision Policy evaluation — required for successful publication. */
+  policyEvaluation: DecisionPolicyResult;
   decision: CouncilDecision;
   decisionStatement: string;
   executiveSummary: string;
@@ -502,6 +544,8 @@ export type ChairmanFailedResult = {
   completionTokens?: number;
   errorMessage: string;
   failureReasonCode: ChairmanFailureReasonCode;
+  /** Present when publication was blocked by Decision Policy (diagnostics only). */
+  policyEvaluation?: DecisionPolicyResult;
   insufficientCouncil?: boolean;
   missingPerspectives?: string[];
 };
