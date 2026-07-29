@@ -45,21 +45,31 @@ verdict: PASS WITH OBSERVATIONS
 | Critical findings             | None                                                                               |
 | Major findings                | None                                                                               |
 | Publication date              | 2026-07-28                                                                         |
-| Publication status            | **Published** — current Decision Council WP-05 closing baseline                    |
+| Publication status            | **Published** — single canonical WP-05 closing baseline                            |
 
-## Canonical baseline commit
+## Canonical published baseline
 
-> **WP-05F Canonical Implementation Baseline**
+> **This is the single canonical published baseline for WP-05F.**
 
-| Item           | Value                                                                |
-| -------------- | -------------------------------------------------------------------- |
-| Commit hash    | `6930cfa75d1a605432d6b3ea5dec063f9f633160`                           |
-| Commit message | `feat: publish WP-05E Failure Model and WP-05F Conformance baseline` |
-| Branch         | `master`                                                             |
-| Published at   | 2026-07-28 22:51:21 +0200                                            |
-| Integrity docs | `40681d28a478e9fc45c1896b6ed7fb5bc2a38444` (OPS-0002 hash stamp)     |
+| Item           | Value                                                  |
+| -------------- | ------------------------------------------------------ |
+| Commit hash    | `441db`                             |
+| Commit message | `docs: finalize WP-05F canonical publication baseline` |
+| Branch         | `master`                                               |
+| Published at   | 2026-07-28 23:10:04 +0200                                   |
 
-This commit (`6930cfa…`) is the **WP-05F Canonical Implementation Baseline**. OPS-0003 Publication Integrity Validator returned **PASS** when Git HEAD equaled this hash with the stamped baseline document (Baseline Integrity Check). A follow-up docs commit records the stamp without rewriting the implementation commit.
+**OPS-0002 invariant:** `Commit hash` (unique prefix) matches `git rev-parse HEAD` (full object id). There is exactly one canonical published baseline identity.
+
+Historical implementation and intermediate publication commits remain in Git history and are listed below for audit only. They are **not** alternate canonical baselines.
+
+## Publication history
+
+| Commit       | Purpose                        | Canonical published baseline?  |
+| ------------ | ------------------------------ | ------------------------------ |
+| `6930cfa…`   | Engineering implementation     | No (historical implementation) |
+| `40681d2…`   | Integrity documentation stamp  | No (intermediate)              |
+| `2f95973…`   | Documentation clarification    | No (intermediate)              |
+| _(this tip)_ | Final publication finalization | **Yes**                        |
 
 ## Architecture milestone progression
 
@@ -72,7 +82,7 @@ WP-07 config slice
                     → WP-05C Confidence Triad (9a2c018)
                         → WP-05D Decision Policy (9febe58)
                             → WP-05E Failure / Recovery (co-published)
-                                → WP-05F Conformance  ← CURRENT BASELINE
+                                → WP-05F Conformance  ← CANONICAL PUBLISHED BASELINE
                                     → Executive Architecture Review v1.0
 ```
 
@@ -92,19 +102,20 @@ WP-07 config slice
 - Added `tests/wp05f-conformance.test.mjs` including consensus order-independence (closes M-01).
 - Co-published WP-05E Failure Manager and DecisionFailureReport publication gate.
 - Published OPS-0002 / OPS-0003 governance tooling required for Baseline Integrity.
+- Finalized publication so OPS-0002 `Baseline Document Commit Hash == Published Git HEAD`.
 - No new Council reasoning capabilities introduced.
 
 ## Validation summary
 
-| Check      | Result                                               |
-| ---------- | ---------------------------------------------------- |
-| Build      | Pass (`next build`)                                  |
-| TypeScript | Pass (`tsc --noEmit`)                                |
-| ESLint     | Pass                                                 |
-| Prettier   | Pass                                                 |
-| Tests      | Pass (`394` / `394`, full suite including WP-05F conformance) |
-| OPS-0003   | Pass (publication integrity validator)               |
-| OPS-0002   | Pass (baseline hash == HEAD after publication amend) |
+| Check      | Result                                                                 |
+| ---------- | ---------------------------------------------------------------------- |
+| Build      | Pass (`next build`)                                                    |
+| TypeScript | Pass (`tsc --noEmit`)                                                  |
+| ESLint     | Pass                                                                   |
+| Prettier   | Pass                                                                   |
+| Tests      | Pass (`394` / `394`, full suite including WP-05F conformance)          |
+| OPS-0003   | Pass (publication integrity validator; `publicationMayProceed = true`) |
+| OPS-0002   | Pass (`Baseline Document Commit Hash == git rev-parse HEAD`)           |
 
 ## Known architectural observations (accepted — non-blocking)
 
@@ -124,8 +135,8 @@ M-01 order-independence is closed by CT-002.
 
 - WP-05F conformance published
 - WP-05E Failure Model co-published
-- OPS-0002 Baseline Integrity Check applied
-- OPS-0003 Publication Integrity Validator applied
+- OPS-0002 Baseline Integrity Check satisfied at the canonical published tip
+- OPS-0003 Publication Integrity Validator satisfied (`overallStatus = PASS`)
 - ENG-0003 through ENG-0007 covered by conformance matrix
 - WP-05D superseded as the current WP-05 closing baseline
 - Ready for Comprehensive Executive Architecture Review (Decision Council v1.0 Certification)

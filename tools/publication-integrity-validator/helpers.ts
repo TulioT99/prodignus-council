@@ -5,7 +5,7 @@ import path from "node:path";
  * Prefers a table/field context containing "Commit hash".
  */
 export function extractCommitHashFromBaseline(content: string): string | null {
-  const fieldMatch = content.match(/Commit hash\s*\|\s*`?([0-9a-f]{7,64})`?/i);
+  const fieldMatch = content.match(/Commit hash\s*\|\s*`?([0-9a-f]{5,64})`?/i);
   if (fieldMatch?.[1]) {
     return fieldMatch[1];
   }
