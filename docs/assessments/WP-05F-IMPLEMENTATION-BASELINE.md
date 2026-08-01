@@ -53,10 +53,10 @@ verdict: PASS WITH OBSERVATIONS
 
 | Item           | Value                                                  |
 | -------------- | ------------------------------------------------------ |
-| Commit hash    | `441db`                             |
+| Commit hash    | `8e1c3`                                                |
 | Commit message | `docs: finalize WP-05F canonical publication baseline` |
 | Branch         | `master`                                               |
-| Published at   | 2026-07-28 23:10:04 +0200                                   |
+| Published at   | 2026-07-28 23:10:04 +0200                              |
 
 **OPS-0002 invariant:** `Commit hash` (unique prefix) matches `git rev-parse HEAD` (full object id). There is exactly one canonical published baseline identity.
 

@@ -45,9 +45,7 @@ function gitCommitHash(content) {
 
 // Reuse prefix already stamped into the baseline if present.
 let baseline = fs.readFileSync(baselinePath, "utf8");
-const existing = baseline.match(
-  /Commit hash\s*\|\s*`([0-9a-f]{5,64})`/i,
-);
+const existing = baseline.match(/Commit hash\s*\|\s*`([0-9a-f]{5,64})`/i);
 const prefix =
   existing?.[1]?.length === PREFIX_LEN
     ? existing[1].toLowerCase()
